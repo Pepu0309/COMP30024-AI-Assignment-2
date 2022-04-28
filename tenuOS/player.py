@@ -1,5 +1,7 @@
 
 class Player:
+
+    
     def __init__(self, player, n):
         """
         Called once at the beginning of a game to initialise this player.
