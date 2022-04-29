@@ -11,12 +11,10 @@ class Player:
         """
         # put your code here
         self.colour = player
-        self.alpha = float('-inf')
-        self.beta = float('inf')
-        self.board = []
+        self.board_state = []
         for r in range(n):
             board_row = []
-            self.board.append(board_row)
+            self.board_state.append(board_row)
             for q in range(n):
                 board_row.append("unoccupied")
 
@@ -26,6 +24,8 @@ class Player:
         of the game, select an action to play.
         """
         # put your code here
+        alpha = float('-inf')
+        beta = float('inf')
     
     def turn(self, player, action):
         """
@@ -42,5 +42,46 @@ class Player:
         if action[0] == "PLACE":
             r = action[1]
             q = action[2]
-            self.board[r][q] = player
+            self.board_state[r][q] = player
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
+
+
+def max_value(state, game, alpha, beta):
+    if cutoff_test(state):
+        return eval_func(state)
+
+    # add successor_states later, TBD
+    for successor_state in successor_states(state):
+        alpha = max(alpha, min_value(successor_state, game, alpha, beta))
+        if alpha >= beta:
+            return beta
+
+    return alpha
+
+
+def min_value(state, game, alpha, beta):
+    if cutoff_test(state):
+        return eval_func(state)
+
+    # add successor_states later, TBD
+    for successor_state in successor_states(state):
+        beta = min(beta, max_value(successor_state, game, alpha, beta))
+        if beta <= alpha:
+            return alpha
+
+    return beta
+
+
+def cutoff_test(state):
+    # cutoff_depth or goal_state
+    return False
+
+
+def eval_func(state):
+    # evaluation function goes here
+    return 0
+
+
+def successor_states(state):
+    successor_states = []
+    return successor_states
