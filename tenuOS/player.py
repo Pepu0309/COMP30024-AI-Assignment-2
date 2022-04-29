@@ -1,3 +1,10 @@
+from enum import Enum
+
+class Tile(Enum):
+    BLUE = 0
+    RED = 1
+    EMPTY = 2
+
 class Player:
 
     def __init__(self, player, n):
@@ -16,7 +23,7 @@ class Player:
             board_row = []
             self.board_state.append(board_row)
             for q in range(n):
-                board_row.append("unoccupied")
+                board_row.append(Tile.EMPTY)
 
     def action(self):
         """
@@ -79,6 +86,8 @@ def cutoff_test(state):
 
 def eval_func(state):
     # evaluation function goes here
+
+    # A* eval
     return 0
 
 

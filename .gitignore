@@ -133,3 +133,6 @@ dmypy.json
 # bloody DS_Store
 .DS_Store
 
+#VSCode
+.vscode/
+
