@@ -24,7 +24,7 @@ class Player:
         of the game, select an action to play.
         """
         # put your code here
-        alpha = float('-inf')
+        alpha = -(float('inf'))
         beta = float('inf')
     
     def turn(self, player, action):
@@ -46,34 +46,37 @@ class Player:
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
 
 
-def max_value(state, game, alpha, beta):
-    if cutoff_test(state):
+def max_value(state, game, alpha, beta, depth, player_colour):
+    if cutoff_test(state, depth):
         return eval_func(state)
 
     # add successor_states later, TBD
-    for successor_state in successor_states(state):
-        alpha = max(alpha, min_value(successor_state, game, alpha, beta))
+    for successor_state in successor_states(state, player_colour):
+        alpha = max(alpha, min_value(successor_state, game, alpha, beta, depth+1, player_colour))
         if alpha >= beta:
             return beta
 
     return alpha
 
 
-def min_value(state, game, alpha, beta):
-    if cutoff_test(state):
+def min_value(state, game, alpha, beta, depth, player_colour):
+    if cutoff_test(state, depth):
         return eval_func(state)
 
     # add successor_states later, TBD
-    for successor_state in successor_states(state):
-        beta = min(beta, max_value(successor_state, game, alpha, beta))
+    for successor_state in successor_states(state, player_colour):
+        beta = min(beta, max_value(successor_state, game, alpha, beta, depth+1, player_colour))
         if beta <= alpha:
             return alpha
 
     return beta
 
 
-def cutoff_test(state):
-    # cutoff_depth or goal_state
+def cutoff_test(state, depth):
+    # cutoff_depth or terminal_state
+    if(depth == 5):
+        return True
+
     return False
 
 
@@ -82,6 +85,15 @@ def eval_func(state):
     return 0
 
 
-def successor_states(state):
+def successor_states(state, player_colour):
+    # Create successor for the moves using the player colour
     successor_states = []
     return successor_states
+
+class SuccessorState:
+    def __init__(self, state, move, player_colour):
+        r = move[0]
+        q = move[1]
+        state[r][q] = player_colour
+        self.state = state
+        self.move = move
