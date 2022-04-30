@@ -100,7 +100,6 @@ def eval_func(state):
     # evaluation function goes here
     return 0
 
-
 def get_successor_states(state, board_size, player_colour):
     # Create successor for the moves using the player colour
     successor_states = []
@@ -111,11 +110,44 @@ def get_successor_states(state, board_size, player_colour):
 
     return successor_states
 
-
 class SuccessorState:
     def __init__(self, state, move, player_colour):
-        r = move[0]
-        q = move[1]
-        state[r][q] = player_colour
+        self.move_r = move[0]
+        self.move_q = move[1]
+        self.player_colour = player_colour
+        state[self.move_r][self.move_q] = player_colour
         self.state = state
-        self.move = move
+
+    def capture(self):
+        r = self.move_r
+        q = self.move_q
+
+        # Temporary placeholder, implement logic to determine opponent colour later
+        opponent_colour = "red"
+
+        # If there is an occupied cell of the same colour to the bottom of this current move
+        if self.state[r-2][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the bottom right and bottom left of
+            # this move, then this move is a capture.
+            if self.state[r-1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour above this current move
+        elif self.state[r+2][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top right and top left of
+            # this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r+1][q] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour to the right of this current move
+        elif self.state[r][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top right and bottom right of
+            # this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r-1][q] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour to the left of this current move
+        elif self.state[r][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top left and bottom left of
+            # this move, this move is a capture.
+            if self.state[r+1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                return True
+
+
