@@ -10,8 +10,9 @@ class Player:
         as Blue.
         """
         # put your code here
-        self.colour = player
+        self.player_colour = player
         self.board_state = []
+        self.board_size = n
         for r in range(n):
             board_row = []
             self.board_state.append(board_row)
@@ -26,6 +27,19 @@ class Player:
         # put your code here
         alpha = -(float('inf'))
         beta = float('inf')
+
+        best_move = None
+        for potential_move in get_successor_states(self.board_state, self.board_size, self.player_colour):
+            # For each move their, evaluation function value should be the minimum value of its successor states
+            # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
+            # the potential moves available to us in this current turn.
+            cur_move_value = min_value(potential_move, self.board_size, alpha, beta, 1, self.player_colour)
+
+            if cur_move_value > alpha:
+                alpha = cur_move_value
+                best_move = potential_move
+
+        print(best_move)
     
     def turn(self, player, action):
         """
@@ -46,26 +60,28 @@ class Player:
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
 
 
-def max_value(state, game, alpha, beta, depth, player_colour):
+# Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
+# player_colour
+def max_value(state, board_size, alpha, beta, depth, player_colour):
     if cutoff_test(state, depth):
         return eval_func(state)
 
-    # add successor_states later, TBD
-    for successor_state in successor_states(state, player_colour):
-        alpha = max(alpha, min_value(successor_state, game, alpha, beta, depth+1, player_colour))
+    successor_states = get_successor_states(state, board_size, player_colour)
+    for successor_state in successor_states:
+        alpha = max(alpha, min_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
         if alpha >= beta:
             return beta
 
     return alpha
 
 
-def min_value(state, game, alpha, beta, depth, player_colour):
+def min_value(state, board_size, alpha, beta, depth, player_colour):
     if cutoff_test(state, depth):
         return eval_func(state)
 
-    # add successor_states later, TBD
-    for successor_state in successor_states(state, player_colour):
-        beta = min(beta, max_value(successor_state, game, alpha, beta, depth+1, player_colour))
+    successor_states = get_successor_states(state, board_size, player_colour)
+    for successor_state in successor_states:
+        beta = min(beta, max_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
         if beta <= alpha:
             return alpha
 
@@ -74,7 +90,7 @@ def min_value(state, game, alpha, beta, depth, player_colour):
 
 def cutoff_test(state, depth):
     # cutoff_depth or terminal_state
-    if(depth == 5):
+    if depth == 4:
         return True
 
     return False
@@ -85,10 +101,16 @@ def eval_func(state):
     return 0
 
 
-def successor_states(state, player_colour):
+def get_successor_states(state, board_size, player_colour):
     # Create successor for the moves using the player colour
     successor_states = []
+
+    for r in range(board_size):
+        for q in range(board_size):
+            successor_states.append(SuccessorState(state[:], (r, q), player_colour))
+
     return successor_states
+
 
 class SuccessorState:
     def __init__(self, state, move, player_colour):
