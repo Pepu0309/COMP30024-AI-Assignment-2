@@ -9,7 +9,7 @@ from game import *
 from funcs import *
 import pygame as pg
 
-game = Game(SIZE, True, True)
+game = Game(SIZE, False, True)
 game.load_data()
 
 # button initializing

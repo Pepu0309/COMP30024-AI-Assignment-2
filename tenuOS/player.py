@@ -17,6 +17,7 @@ class Player:
         as Blue.
         """
         # put your code here
+        self.n = n
         self.colour = player
         self.board_state = []
         for r in range(n):
