@@ -62,7 +62,7 @@ class Node:
             return True
         else:
             self.set_colour(state)
-        if (mode == Mode.EVAL and self.colour != Tile.EMPTY and self.colour != colour):  
+        if (mode == Mode.WIN_DIST and self.colour != Tile.EMPTY and self.colour != colour):  
             #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         elif (mode == Mode.WIN_TEST and self.colour != colour):
@@ -102,7 +102,7 @@ class NodeCost:
         Calculated the cumulative path cost of adjacent nodes for the given
         mode, assuming path goes via self's node.
         """
-        if mode == Mode.EVAL:
+        if mode == Mode.WIN_DIST:
             if self.node.colour == Tile.EMPTY:
                 return self.cumul_path_cost + 1
             elif self.node.colour == colour:
@@ -171,7 +171,7 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     traversed with constant cost, i.e. the graph is unweighted and dijkstra's 
     will collapse to breadth first search.
     
-    Mode.EVAL
+    Mode.WIN_DIST
 
     Calculating the minimum number of empty tiles a colour needs to fill in for
     a winning path, as a feature of eval() whereby empty tiles have path cost 1

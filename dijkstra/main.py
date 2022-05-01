@@ -21,7 +21,7 @@ from dijkstra.util import *
 debug = False
 
 enum_conversions = {
-    "eval": Mode.EVAL,
+    "eval": Mode.WIN_DIST,
     "win_test": Mode.WIN_TEST,
     "blue": Tile.BLUE,
     "red": Tile.RED,
