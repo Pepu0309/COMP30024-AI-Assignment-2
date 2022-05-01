@@ -1,3 +1,5 @@
+from util.enums import *
+
 class Player:
 
     def __init__(self, player, n):
@@ -10,14 +12,14 @@ class Player:
         as Blue.
         """
         # put your code here
-        self.player_colour = player
+        self.colour = player
         self.board_state = []
         self.board_size = n
-        for r in range(n):
+        for r in range(self.board_size):
             board_row = []
             self.board_state.append(board_row)
-            for q in range(n):
-                board_row.append("unoccupied")
+            for q in range(self.board_size):
+                board_row.append(Tile.EMPTY)
 
     def action(self):
         """
@@ -97,7 +99,8 @@ def cutoff_test(state, depth):
 
 
 def eval_func(state):
-    # evaluation function goes here
+    
+
     return 0
 
 def get_successor_states(state, board_size, player_colour):

@@ -10,8 +10,7 @@ import sys
 from os import path
 from funcs import *
 from button import *
-from player import Player
-
+#from player import Player
 
 class Game:
     def __init__(self, size, with_ai, sound_state):
