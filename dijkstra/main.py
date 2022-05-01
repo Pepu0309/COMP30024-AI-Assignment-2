@@ -14,7 +14,7 @@ import sys, json
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
 from dijkstra.pathfinding.pathfinding import *
-from tenuOS.player import SuccessorState
+from tenuOS.player import Player
 from util.enums import *
 from dijkstra.util import *
 
@@ -41,11 +41,8 @@ def main():
         print("usage: python3 -m search path/to/input.json", file=sys.stderr)
         sys.exit(1)
 
-    successor_state = SuccessorState(
-        state_from_json(data),
-        data["last_move"], 
-        enum_conversions[data["player_colour"]]
-    )
+    state = state_from_json(data)
+    player_colour = enum_conversions[data["player_colour"]]
     board_size = int(data["n"])
     start = tuple(data["start"])
     goal_edge = enum_conversions[data["goal_edge"]]
@@ -58,14 +55,15 @@ def main():
 
     print_board(board_size, board_dict, "THE BOARD")
 
-    print_state(successor_state.state)
+    print_state(state)
 
     print("board size = " + str(board_size))
+    print("player colour = " + str(player_colour))
     print("start coords = " + str(start))
     print("mode = " + str(mode))
     print("goal edge = " + str(goal_edge))
 
-    path_cost = search_path(successor_state, board_size, start, goal_edge, mode)
+    path_cost = search_path(state, player_colour, board_size, start, goal_edge, mode)
     print("\npath cost = " + str(path_cost) + "\n")
 
 def state_from_json(data):

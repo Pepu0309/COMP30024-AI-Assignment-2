@@ -1,5 +1,6 @@
 # standard imports
 from cmath import inf
+import sys
 import heapq
 
 from dijkstra.util import print_coordinate
@@ -150,7 +151,7 @@ class PriorityQueue:
         return len(self.heap) == 0
 
 
-def search_path(successor_state, board_size, start_coords, goal_edge, mode):
+def search_path(state, player_colour, board_size, start_coords, goal_edge, mode):
     """
     Dijkstra's algorithm implementation for finding the shortest path from some
     starting tile to either of the four board edges. Adapted from an A*
@@ -177,7 +178,12 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
     and own colour tiles have path cost 0.
     """
 
-    start_node = Node(start_coords, successor_state.state)
+    start_node = Node(start_coords, state)
+
+    # return None and post error if starting node is out of bounds
+    if start_node.out_of_bounds(board_size):
+        print("pathfinding error: starting node out of bounds", file=sys.stderr)
+        return None
 
     # defining nested function to check for terminal / goal state
     # probably a better way to do this
@@ -227,19 +233,19 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
             return curr_node_cost.cumul_path_cost
 
         # loop through all of the node / tile's adjacent nodes / tiles
-        for adjacent_node in curr_node_cost.node.get_adjacent_nodes(successor_state.state):
+        for adjacent_node in curr_node_cost.node.get_adjacent_nodes(state):
 
             #adjacent_node.print_node_coords()
 
             # skip if a node cannot be traversed to, i.e. out of bounds, or
             # wrong colour depending on mode
-            if curr_node_cost.node.tile_unavailable(successor_state.state, successor_state.player_colour, mode, board_size):
+            if curr_node_cost.node.tile_unavailable(state, player_colour, mode, board_size):
                 continue
 
             #print("available")    
 
             # calculate cost of traversing to adjacent node for given mode    
-            new_cost = curr_node_cost.adjacent_cost(successor_state.state, successor_state.player_colour, mode)
+            new_cost = curr_node_cost.adjacent_cost(state, player_colour, mode)
 
             #print(new_cost)
 
