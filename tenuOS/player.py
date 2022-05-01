@@ -13,7 +13,11 @@ class Player:
         as Blue.
         """
         # put your code here
-        self.player_colour = player
+        if player == "red":
+            self.player_colour = Tile.RED
+        elif player == "blue":
+            self.player_colour = Tile.BLUE
+
         self.board_state = []
         self.board_size = n
         for r in range(self.board_size):
@@ -71,7 +75,7 @@ def max_value(state, board_size, alpha, beta, depth, player_colour):
 
     successor_states = get_successor_states(state, board_size, player_colour)
     for successor_state in successor_states:
-        alpha = max(alpha, min_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
+        alpha = max(alpha, min_value(successor_state, board_size, alpha, beta, depth+1, (player_colour+1) % 2))
         if alpha >= beta:
             return beta
 
@@ -84,7 +88,7 @@ def min_value(state, board_size, alpha, beta, depth, player_colour):
 
     successor_states = get_successor_states(state, board_size, player_colour)
     for successor_state in successor_states:
-        beta = min(beta, max_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
+        beta = min(beta, max_value(successor_state, board_size, alpha, beta, depth+1, (player_colour+1) % 2))
         if beta <= alpha:
             return alpha
 
@@ -123,6 +127,8 @@ class SuccessorState:
         self.player_colour = player_colour
         self.board_size = board_size
 
+        self.apply_move()
+
     def apply_move(self):
         self.state[self.move_r][self.move_q] = self.player_colour
 
@@ -132,8 +138,7 @@ class SuccessorState:
 
         cells_to_remove = []
         # Temporary placeholder, implement logic to determine opponent colour later
-        opponent_colour = "red"
-        # ADD IS_VALID CHECK LATER
+        opponent_colour = (self.player_colour+1) % 2
 
         # ----------------------------------Opposite Colour Adjacent Cases-------------------------------------------
         # If there is an occupied cell of the same colour distance 2 away above this current move
