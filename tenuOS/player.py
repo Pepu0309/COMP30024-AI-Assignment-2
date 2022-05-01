@@ -12,13 +12,13 @@ class Player:
         as Blue.
         """
         # put your code here
-        self.n = n
         self.colour = player
         self.board_state = []
-        for r in range(n):
+        self.board_size = n
+        for r in range(self.board_size):
             board_row = []
             self.board_state.append(board_row)
-            for q in range(n):
+            for q in range(self.board_size):
                 board_row.append(Tile.EMPTY)
 
     def action(self):
@@ -27,8 +27,21 @@ class Player:
         of the game, select an action to play.
         """
         # put your code here
-        alpha = float('-inf')
+        alpha = -(float('inf'))
         beta = float('inf')
+
+        best_move = None
+        for potential_move in get_successor_states(self.board_state, self.board_size, self.player_colour):
+            # For each move their, evaluation function value should be the minimum value of its successor states
+            # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
+            # the potential moves available to us in this current turn.
+            cur_move_value = min_value(potential_move, self.board_size, alpha, beta, 1, self.player_colour)
+
+            if cur_move_value > alpha:
+                alpha = cur_move_value
+                best_move = potential_move
+
+        print(best_move)
     
     def turn(self, player, action):
         """
@@ -49,34 +62,39 @@ class Player:
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
 
 
-def max_value(state, game, alpha, beta):
-    if cutoff_test(state):
+# Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
+# player_colour
+def max_value(state, board_size, alpha, beta, depth, player_colour):
+    if cutoff_test(state, depth):
         return eval_func(state)
 
-    # add successor_states later, TBD
-    for successor_state in successor_states(state):
-        alpha = max(alpha, min_value(successor_state, game, alpha, beta))
+    successor_states = get_successor_states(state, board_size, player_colour)
+    for successor_state in successor_states:
+        alpha = max(alpha, min_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
         if alpha >= beta:
             return beta
 
     return alpha
 
 
-def min_value(state, game, alpha, beta):
-    if cutoff_test(state):
+def min_value(state, board_size, alpha, beta, depth, player_colour):
+    if cutoff_test(state, depth):
         return eval_func(state)
 
-    # add successor_states later, TBD
-    for successor_state in successor_states(state):
-        beta = min(beta, max_value(successor_state, game, alpha, beta))
+    successor_states = get_successor_states(state, board_size, player_colour)
+    for successor_state in successor_states:
+        beta = min(beta, max_value(successor_state, board_size, alpha, beta, depth+1, player_colour))
         if beta <= alpha:
             return alpha
 
     return beta
 
 
-def cutoff_test(state):
-    # cutoff_depth or goal_state
+def cutoff_test(state, depth):
+    # cutoff_depth or terminal_state
+    if depth == 4:
+        return True
+
     return False
 
 
@@ -85,7 +103,54 @@ def eval_func(state):
 
     return 0
 
-
-def successor_states(state):
+def get_successor_states(state, board_size, player_colour):
+    # Create successor for the moves using the player colour
     successor_states = []
+
+    for r in range(board_size):
+        for q in range(board_size):
+            successor_states.append(SuccessorState(state[:], (r, q), player_colour))
+
     return successor_states
+
+class SuccessorState:
+    def __init__(self, state, move, player_colour):
+        self.move_r = move[0]
+        self.move_q = move[1]
+        self.player_colour = player_colour
+        state[self.move_r][self.move_q] = player_colour
+        self.state = state
+
+    def capture(self):
+        r = self.move_r
+        q = self.move_q
+
+        # Temporary placeholder, implement logic to determine opponent colour later
+        opponent_colour = "red"
+
+        # If there is an occupied cell of the same colour to the bottom of this current move
+        if self.state[r-2][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the bottom right and bottom left of
+            # this move, then this move is a capture.
+            if self.state[r-1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour above this current move
+        elif self.state[r+2][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top right and top left of
+            # this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r+1][q] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour to the right of this current move
+        elif self.state[r][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top right and bottom right of
+            # this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r-1][q] == opponent_colour:
+                return True
+        # If there is an occupied cell of the same colour to the left of this current move
+        elif self.state[r][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent to the top left and bottom left of
+            # this move, this move is a capture.
+            if self.state[r+1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                return True
+
+
