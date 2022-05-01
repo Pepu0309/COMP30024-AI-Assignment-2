@@ -6,7 +6,7 @@ class Tile(Enum):
     EMPTY = 2
 
 class Mode(Enum):
-    EVAL = 0
+    WIN_DIST = 0
     WIN_TEST = 1
 
 class GoalEdge(Enum):

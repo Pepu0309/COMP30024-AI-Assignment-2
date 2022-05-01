@@ -1,5 +1,6 @@
 # standard imports
 from cmath import inf
+import sys
 import heapq
 
 from dijkstra.util import print_coordinate
@@ -61,7 +62,7 @@ class Node:
             return True
         else:
             self.set_colour(state)
-        if (mode == Mode.EVAL and self.colour != Tile.EMPTY and self.colour != colour):  
+        if (mode == Mode.WIN_DIST and self.colour != Tile.EMPTY and self.colour != colour):  
             #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         elif (mode == Mode.WIN_TEST and self.colour != colour):
@@ -101,7 +102,7 @@ class NodeCost:
         Calculated the cumulative path cost of adjacent nodes for the given
         mode, assuming path goes via self's node.
         """
-        if mode == Mode.EVAL:
+        if mode == Mode.WIN_DIST:
             if self.node.colour == Tile.EMPTY:
                 return self.cumul_path_cost + 1
             elif self.node.colour == colour:
@@ -150,7 +151,7 @@ class PriorityQueue:
         return len(self.heap) == 0
 
 
-def search_path(successor_state, board_size, start_coords, goal_edge, mode):
+def search_path(state, player_colour, board_size, start_coords, goal_edge, mode):
     """
     Dijkstra's algorithm implementation for finding the shortest path from some
     starting tile to either of the four board edges. Adapted from an A*
@@ -170,14 +171,19 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
     traversed with constant cost, i.e. the graph is unweighted and dijkstra's 
     will collapse to breadth first search.
     
-    Mode.EVAL
+    Mode.WIN_DIST
 
     Calculating the minimum number of empty tiles a colour needs to fill in for
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
     """
 
-    start_node = Node(start_coords, successor_state.state)
+    start_node = Node(start_coords, state)
+
+    # return None and post error if starting node is out of bounds
+    if start_node.out_of_bounds(board_size):
+        print("pathfinding error: starting node out of bounds", file=sys.stderr)
+        return None
 
     # defining nested function to check for terminal / goal state
     # probably a better way to do this
@@ -227,19 +233,19 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
             return curr_node_cost.cumul_path_cost
 
         # loop through all of the node / tile's adjacent nodes / tiles
-        for adjacent_node in curr_node_cost.node.get_adjacent_nodes(successor_state.state):
+        for adjacent_node in curr_node_cost.node.get_adjacent_nodes(state):
 
             #adjacent_node.print_node_coords()
 
             # skip if a node cannot be traversed to, i.e. out of bounds, or
             # wrong colour depending on mode
-            if curr_node_cost.node.tile_unavailable(successor_state.state, successor_state.player_colour, mode, board_size):
+            if curr_node_cost.node.tile_unavailable(state, player_colour, mode, board_size):
                 continue
 
             #print("available")    
 
             # calculate cost of traversing to adjacent node for given mode    
-            new_cost = curr_node_cost.adjacent_cost(successor_state.state, successor_state.player_colour, mode)
+            new_cost = curr_node_cost.adjacent_cost(state, player_colour, mode)
 
             #print(new_cost)
 
