@@ -2,8 +2,8 @@
 from cmath import inf
 import heapq
 
-from util import print_coordinate
-from tenuOS.enums import *
+from dijkstra.util import print_coordinate
+from util.enums import *
 
 
 class Node:
@@ -18,7 +18,7 @@ class Node:
     def __init__(self, coords, state):
         self.r = coords[0]
         self.q = coords[1]
-        self.colour = state[self.r][self.q]
+        self.colour = None
 
     def __eq__(self, other):
         return self.r == other.r and self.q == other.q
@@ -47,17 +47,25 @@ class Node:
         # Going diagonally towards bot right
         adjacent_nodes.append(Node((self.r - 1, self.q + 1), state))
         return adjacent_nodes
+    
+    def set_colour(self, state):
+        self.colour = state[self.r][self.q]
 
-    def tile_unavailable(self, colour, mode, n):
+    def tile_unavailable(self, state, colour, mode, n):
         """
         Returns true if, for the given use case as defined by mode, the
         current node can be traversed while graph is being searched.
         """
         if self.out_of_bounds(n): 
+            #print("out of bounds")
             return True
-        if (mode == Mode.EVAL and self.colour != Tile.EMPTY and self.colour != colour):
+        else:
+            self.set_colour(state)
+        if (mode == Mode.EVAL and self.colour != Tile.EMPTY and self.colour != colour):  
+            #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         elif (mode == Mode.WIN_TEST and self.colour != colour):
+            #print("mode is win_test, and colour is opposite or empty,, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         return False        
 
@@ -88,7 +96,7 @@ class NodeCost:
         """
         return self.cumul_path_cost < other.cumul_path_cost
 
-    def adjacent_cost(self, colour, mode):
+    def adjacent_cost(self, state, colour, mode):
         """
         Calculated the cumulative path cost of adjacent nodes for the given
         mode, assuming path goes via self's node.
@@ -168,6 +176,7 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
     """
+
     start_node = Node(start_coords, successor_state.state)
 
     # defining nested function to check for terminal / goal state
@@ -218,15 +227,21 @@ def search_path(successor_state, board_size, start_coords, goal_edge, mode):
             return curr_node_cost.cumul_path_cost
 
         # loop through all of the node / tile's adjacent nodes / tiles
-        for adjacent_node in curr_node_cost.node.get_adjacent_nodes():
+        for adjacent_node in curr_node_cost.node.get_adjacent_nodes(successor_state.state):
+
+            #adjacent_node.print_node_coords()
 
             # skip if a node cannot be traversed to, i.e. out of bounds, or
             # wrong colour depending on mode
-            if curr_node_cost.node.tile_unavailable(successor_state.colour, mode, board_size):
+            if curr_node_cost.node.tile_unavailable(successor_state.state, successor_state.player_colour, mode, board_size):
                 continue
 
+            #print("available")    
+
             # calculate cost of traversing to adjacent node for given mode    
-            new_cost = curr_node_cost.adjacent_cost(successor_state.colour, mode)
+            new_cost = curr_node_cost.adjacent_cost(successor_state.state, successor_state.player_colour, mode)
+
+            #print(new_cost)
 
             # if this node isn't in cumulative_cost_dict, we have not visited it
             # yet. If the new_cost is less than the value in the

@@ -1,3 +1,3 @@
-from search.main import main
+from dijkstra.main import main
 
 main()

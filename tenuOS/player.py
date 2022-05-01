@@ -1,4 +1,4 @@
-from enums import *
+from util.enums import *
 
 class Player:
 

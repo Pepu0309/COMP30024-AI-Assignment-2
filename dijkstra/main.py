@@ -6,16 +6,31 @@ This script contains the entry point to the program (the code in
 `__main__.py` calls `main()`). Your solution starts here!
 """
 
-import sys
-import json
+import sys, json
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(main))))
+
 
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
-import util
-import pathfinding
-from tenuOS.enums import *
-from tenuOS.player import SucessorState
+from dijkstra.pathfinding.pathfinding import *
+from tenuOS.player import SuccessorState
+from util.enums import *
+from dijkstra.util import *
+
+debug = False
+
+enum_conversions = {
+    "eval": Mode.EVAL,
+    "win_test": Mode.WIN_TEST,
+    "blue": Tile.BLUE,
+    "red": Tile.RED,
+    "empty": Tile.EMPTY,
+    "blue_start": GoalEdge.BLUE_START,
+    "blue_end": GoalEdge.BLUE_END,
+    "red_start": GoalEdge.RED_START,
+    "red_end": GoalEdge.RED_END,
+}
 
 def main():
 
@@ -26,15 +41,32 @@ def main():
         print("usage: python3 -m search path/to/input.json", file=sys.stderr)
         sys.exit(1)
 
-    successor_state = SuccesorState(state_from_json(data))
+    successor_state = SuccessorState(
+        state_from_json(data),
+        data["last_move"], 
+        enum_conversions[data["player_colour"]]
+    )
     board_size = int(data["n"])
     start = tuple(data["start"])
-    goal_edge = data["goal_edge"]
-    mode = data["mode"]
+    goal_edge = enum_conversions[data["goal_edge"]]
+    mode = enum_conversions[data["mode"]]
 
-    print(search_path(successor_state, board_size, start, goal_edge, mode))
+    board_dict = {}
+    for tile in data["board"]:
+        coord = (tile[1], tile[2])
+        board_dict[coord] = tile[0]
 
-    
+    print_board(board_size, board_dict, "THE BOARD")
+
+    print_state(successor_state.state)
+
+    print("board size = " + str(board_size))
+    print("start coords = " + str(start))
+    print("mode = " + str(mode))
+    print("goal edge = " + str(goal_edge))
+
+    path_cost = search_path(successor_state, board_size, start, goal_edge, mode)
+    print("\npath cost = " + str(path_cost) + "\n")
 
 def state_from_json(data):
 
@@ -47,5 +79,15 @@ def state_from_json(data):
             board_row.append(Tile.EMPTY)
     
     for tile in data["board"]:
-        state[tile[1]][tile[2]] = tile[0]
+        state[tile[1]][tile[2]] = enum_conversions[tile[0]]
 
+    return state
+
+def print_state(state):
+
+    print("\nstate as a grid: \n")
+    for r in reversed(state):
+        for q in r:
+            print(str(q), end = ", ")
+        print("")
+    print("")
