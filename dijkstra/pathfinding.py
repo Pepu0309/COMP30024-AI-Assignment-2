@@ -3,7 +3,8 @@ from cmath import inf
 import heapq
 
 from util import print_coordinate
-import tenuOS
+from tenuOS.enums import *
+
 
 class Node:
     """
@@ -141,7 +142,7 @@ class PriorityQueue:
         return len(self.heap) == 0
 
 
-def search_path(successor_state, n, start, goal, mode):
+def search_path(successor_state, board_size, start_coords, goal_edge, mode):
     """
     Dijkstra's algorithm implementation for finding the shortest path from some
     starting tile to either of the four board edges. Adapted from an A*
@@ -167,7 +168,7 @@ def search_path(successor_state, n, start, goal, mode):
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
     """
-    start_node = Node(start, successor_state.state)
+    start_node = Node(start_coords, successor_state.state)
 
     # defining nested function to check for terminal / goal state
     # probably a better way to do this
@@ -177,25 +178,25 @@ def search_path(successor_state, n, start, goal, mode):
             return node.q == 0
     elif goal == Goal.BLUE_END:
         def terminal_test(node):
-            return node.q == n
+            return node.q == board_size
     elif goal == Goal.RED_START:
         def terminal_test(node):
             return node.r == 0
     elif goal == Goal.RED_END:
         def terminal_test(node):
-            return node.r == n
+            return node.r == board_size
     """
 
     # temporary method of testing which doesnt hardcode one of the 4 tests
     def win_test(node):
-        if goal == Goal.BLUE_START:
+        if goal_edge == GoalEdge.BLUE_START:
             return node.q == 0
-        elif goal == Goal.BLUE_END:
-            return node.q == n
-        elif goal == Goal.RED_START:
+        elif goal_edge == GoalEdge.BLUE_END:
+            return node.q == board_size
+        elif goal_edge == GoalEdge.RED_START:
             return node.r == 0
-        elif goal == Goal.RED_END:
-            return node.r == n
+        elif goal_edge == GoalEdge.RED_END:
+            return node.r == board_size
 
     # initialise starting NodeCost obj with path cost 0 and insert into new pq        
     start_node_cost = NodeCost(start_node, 0)
@@ -221,7 +222,7 @@ def search_path(successor_state, n, start, goal, mode):
 
             # skip if a node cannot be traversed to, i.e. out of bounds, or
             # wrong colour depending on mode
-            if curr_node_cost.node.tile_unavailable(successor_state.colour, mode, n):
+            if curr_node_cost.node.tile_unavailable(successor_state.colour, mode, board_size):
                 continue
 
             # calculate cost of traversing to adjacent node for given mode    

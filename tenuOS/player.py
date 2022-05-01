@@ -1,9 +1,4 @@
-from enum import Enum
-
-class Tile(Enum):
-    BLUE = 0
-    RED = 1
-    EMPTY = 2
+from enums import *
 
 class Player:
 
@@ -86,9 +81,8 @@ def cutoff_test(state):
 
 
 def eval_func(state):
-    # evaluation function goes here
+    
 
-    # A* eval
     return 0
 
 
