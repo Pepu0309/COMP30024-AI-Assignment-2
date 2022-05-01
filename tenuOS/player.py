@@ -130,6 +130,7 @@ class SuccessorState:
         self.apply_move()
 
     def apply_move(self):
+        # Change the cell to player's colour
         self.state[self.move_r][self.move_q] = self.player_colour
 
         r = self.move_r
@@ -137,9 +138,9 @@ class SuccessorState:
         board_size = self.board_size
 
         cells_to_remove = []
-        # Temporary placeholder, implement logic to determine opponent colour later
         opponent_colour = (self.player_colour+1) % 2
 
+        # Check for possible captures and tag the cells to be removed from captures
         # ----------------------------------Opposite Colour Adjacent Cases-------------------------------------------
         # If there is an occupied cell of the same colour distance 2 away above this current move
         if is_valid_cell(r+2, q-1, board_size):
