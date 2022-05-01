@@ -118,36 +118,109 @@ class SuccessorState:
         state[self.move_r][self.move_q] = player_colour
         self.state = state
 
-    def capture(self):
+    def apply_move(self):
         r = self.move_r
         q = self.move_q
 
+        cell_to_remove = []
         # Temporary placeholder, implement logic to determine opponent colour later
         opponent_colour = "red"
+        # ADD IS_VALID CHECK LATER
 
-        # If there is an occupied cell of the same colour to the bottom of this current move
-        if self.state[r-2][q+1] == self.player_colour:
-            # Then, if there's also occupied cells belonging to the opponent to the bottom right and bottom left of
-            # this move, then this move is a capture.
-            if self.state[r-1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
-                return True
-        # If there is an occupied cell of the same colour above this current move
-        elif self.state[r+2][q-1] == self.player_colour:
-            # Then, if there's also occupied cells belonging to the opponent to the top right and top left of
-            # this move, this move is a capture.
+        # ----------------------------------Opposite Colour Adjacent Cases-------------------------------------------
+        # If there is an occupied cell of the same colour distance 2 away above this current move
+        if self.state[r+2][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the top left and
+            # top right of this move, this move is a capture.
             if self.state[r+1][q-1] == opponent_colour and self.state[r+1][q] == opponent_colour:
-                return True
-        # If there is an occupied cell of the same colour to the right of this current move
-        elif self.state[r][q-1] == self.player_colour:
-            # Then, if there's also occupied cells belonging to the opponent to the top right and bottom right of
-            # this move, this move is a capture.
+                cell_to_remove.append((r+1, q-1))
+                cell_to_remove.append((r+1, q))
+
+        # If there is an occupied cell of the same colour distance 2 away to the top-left of this current move.
+        if self.state[r+1][q-2] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the top left and left
+            # of this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r][q-1] == opponent_colour:
+                cell_to_remove.append((r+1, q-1))
+                cell_to_remove.append((r, q - 1))
+
+        # If there is an occupied cell of the same colour distance 2 away to the bottom-left of this current move.
+        if self.state[r-1][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the left and bottom left
+            # of this move, this move is a capture.
+            if self.state[r][q-1] == opponent_colour and self.state[r-1][q]:
+                cell_to_remove.append((r, q-1))
+                cell_to_remove.append((r-1, q))
+
+        # If there is an occupied cell of the same colour distance 2 away to the bottom of this current move
+        if self.state[r-2][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom left and
+            # bottom right of this move, then this move is a capture.
+            if self.state[r-1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                cell_to_remove.append((r-1, q))
+                cell_to_remove.append((r-1, q+1))
+
+        # If there is an occupied cell of the same colour distance 2 away to the bottom right of this current move
+        if self.state[r-1][q+2] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom right and right
+            # of this move, then this move is a capture.
+            if self.state[r-1][q+1] == opponent_colour and self.state[r][q+1] == opponent_colour:
+                cell_to_remove.append((r-1, q+1))
+                cell_to_remove.append((r, q+1))
+
+        # If there is an occupied cell of the same colour distance 2 away to the top right of this current move
+        if self.state[r+1][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the right and top right
+            # of this move, then this move is a capture.
+            if self.state[r][q+1] == opponent_colour and self.state[r+1][q] == opponent_colour:
+                cell_to_remove.append((r, q+1))
+                cell_to_remove.append((r+1, q))
+
+        # -------------------------------------Same Colour Adjacent Cases--------------------------------------------
+        # If there is an occupied cell of the same colour distance 1 to the left of this current move
+        if self.state[r][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the top left and
+            # bottom left of this move, this move is a capture.
             if self.state[r+1][q-1] == opponent_colour and self.state[r-1][q] == opponent_colour:
-                return True
-        # If there is an occupied cell of the same colour to the left of this current move
-        elif self.state[r][q+1] == self.player_colour:
-            # Then, if there's also occupied cells belonging to the opponent to the top left and bottom left of
-            # this move, this move is a capture.
+                cell_to_remove.append((r+1, q-1))
+                cell_to_remove.append((r-1, q))
+
+        # If there is an occupied cell of the same colour distance 1 to the right of this current move
+        if self.state[r][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the top right and
+            # bottom right of this move, this move is a capture.
             if self.state[r+1][q] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
-                return True
+                cell_to_remove.append((r+1, q))
+                cell_to_remove.append((r-1, q+1))
 
+        # If there is an occupied cell of the same colour distance 1 to the top left of this current move
+        if self.state[r+1][q-1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the left and top right
+            # of this move, this move is a capture.
+            if self.state[r][q-1] == opponent_colour and self.state[r+1][q] == opponent_colour:
+                cell_to_remove.append((r, q-1))
+                cell_to_remove.append((r+1, q))
 
+        # If there is an occupied cell of the same colour distance 1 to the bottom right of this current move
+        if self.state[r-1][q+1] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom left and right
+            # of this move, this move is a capture.
+            if self.state[r-1][q] == opponent_colour and self.state[r][q+1] == opponent_colour:
+                cell_to_remove.append((r-1, q))
+                cell_to_remove.append((r+1, q))
+
+        # If there is an occupied cell of the same colour distance 1 to the bottom left of this current move
+        if self.state[r-1][q] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the left and bottom right
+            # of this move, this move is a capture.
+            if self.state[r][q-1] == opponent_colour and self.state[r-1][q+1] == opponent_colour:
+                cell_to_remove.append((r, q-1))
+                cell_to_remove.append((r-1, q+1))
+
+        # If there is an occupied cell of the same colour distance 1 to the top right of this current move
+        if self.state[r+1][q] == self.player_colour:
+            # Then, if there's also occupied cells belonging to the opponent distance 1 to the top left and right
+            # of this move, this move is a capture.
+            if self.state[r+1][q-1] == opponent_colour and self.state[r][q+1] == opponent_colour:
+                cell_to_remove.append((r+1, q-1))
+                cell_to_remove.append((r, q+1))
