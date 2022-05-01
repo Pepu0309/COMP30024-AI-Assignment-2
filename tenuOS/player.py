@@ -175,7 +175,7 @@ def eval_func(self, state):
         goal_edge = GoalEdge.RED_END if starting_edge == GoalEdge.RED_START else GoalEdge.RED_START
         min_win_dist_red = inf
         for q in range(board_size):
-            if state[r][q] == Tile.RED: pass
+            if state[r][q] == Tile.BLUE: pass
             temp_path_cost = search_path(state, Tile.BLUE, board_size, (r, q), goal_edge, Mode.WIN_DIST)
             if temp_path_cost < min_win_dist_red:
                 min_win_dist_red = temp_path_cost
