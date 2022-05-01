@@ -1,6 +1,6 @@
 from cmath import inf
 from util.enums import *
-from dijkstra.pathfinding.pathfinding import search_path
+from dijkstra.pathfinding import search_path
 
 class Player:
 

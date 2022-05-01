@@ -13,7 +13,7 @@ import sys, json
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
-from dijkstra.pathfinding.pathfinding import *
+from dijkstra.pathfinding import *
 from tenuOS.player import Player
 from util.enums import *
 from dijkstra.util import *
