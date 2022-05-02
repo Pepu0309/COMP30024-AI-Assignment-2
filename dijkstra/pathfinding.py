@@ -5,7 +5,7 @@ import heapq
 
 from dijkstra.util import print_coordinate
 from util.enums import *
-from util.general import is_valid_cell
+from util.general import *
 
 class Node:
     """
@@ -49,9 +49,6 @@ class Node:
         adjacent_nodes.append(Node((self.r - 1, self.q + 1), state))
         return adjacent_nodes
     
-    def set_colour(self, state):
-        self.colour = state[self.r][self.q]
-
     def tile_unavailable(self, state, colour, mode, n):
         """
         Returns true if, for the given use case as defined by mode, the
@@ -61,7 +58,7 @@ class Node:
             #print("out of bounds")
             return True
         else:
-            self.set_colour(state)
+            self.colour = state[self.r][self.q]
         if (mode == Mode.WIN_DIST and self.colour != Tile.EMPTY and self.colour != colour):  
             #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
@@ -170,6 +167,15 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     Calculating the minimum number of empty tiles a colour needs to fill in for
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
+    """
+
+    """
+    print_state(state) 
+    print(player_colour)
+    print(board_size)
+    print(start_coords)
+    print(goal_edge)
+    print(mode)
     """
 
     start_node = Node(start_coords, state)

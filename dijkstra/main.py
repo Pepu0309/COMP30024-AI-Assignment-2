@@ -36,6 +36,7 @@ import sys, json
 from dijkstra.pathfinding import *
 from tenuOS.player import Player
 from util.enums import *
+from util.general import print_state
 from dijkstra.util import *
 
 def main():
@@ -100,13 +101,3 @@ def state_from_json(data):
 
     return state
 
-def print_state(state):
-    """
-    Prints the current state to console
-    """
-    print("\nstate as a grid: \n")
-    for r in reversed(state):
-        for q in r:
-            print(str(q), end = ", ")
-        print("")
-    print("")

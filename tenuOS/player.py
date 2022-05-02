@@ -1,7 +1,8 @@
 from cmath import inf
 from util.enums import *
 from dijkstra.pathfinding import search_path
-from util.general import is_valid_cell
+from util.general import *
+import copy
 
 class Player:
     def __init__(self, player, n):
@@ -36,18 +37,23 @@ class Player:
         alpha = -(float('inf'))
         beta = float('inf')
 
+        #print("state at start of action()")
+        #print_state(self.board_state)
+
         best_move = None
-        for potential_move in get_successor_states(self.board_state, self.board_size, self.player_colour):
+        for successor_state in self.get_successor_states(self.board_state.copy(), self.board_size, self.player_colour):
             # For each move their, evaluation function value should be the minimum value of its successor states
             # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
             # the potential moves available to us in this current turn.
-            cur_move_value = min_value(potential_move, self.board_size, alpha, beta, 1, self.player_colour)
+            cur_move_value = self.min_value(successor_state.state, self.board_size, alpha, beta, 1, self.player_colour)
 
             if cur_move_value > alpha:
                 alpha = cur_move_value
-                best_move = potential_move
+                best_move = successor_state
 
-        print(best_move)
+        #print(best_move)
+
+        return ("PLACE", best_move.move_r, best_move.move_q)
     
     def turn(self, player, action):
         """
@@ -61,158 +67,183 @@ class Player:
         above. However, the referee has validated it at this point.
         """
         # put your code here
+
+        
         if action[0] == "PLACE":
             r = action[1]
             q = action[2]
-            self.board_state[r][q] = player
+        
+        next_state = SuccessorState(self.board_state.copy(), r, q, ENUM_CONVERSIONS[player], self.board_size)
+        self.board_state = next_state.state.copy()
+
+        #print("state at end of turn()")
+        #print_state(self.board_state)
+
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
 
-
-# Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
-# player_colour
-def max_value(state, board_size, alpha, beta, depth, player_colour):
-    if cutoff_test(state, depth):
-        return eval_func(state)
-
-    successor_states = get_successor_states(state, board_size, player_colour)
-    for successor_state in successor_states:
-        alpha = max(alpha, min_value(successor_state, board_size, alpha, beta, depth+1, (player_colour+1) % 2))
-        if alpha >= beta:
-            return beta
-
-    return alpha
-
-
-def min_value(state, board_size, alpha, beta, depth, player_colour):
-    if cutoff_test(state, depth):
-        return eval_func(state)
-
-    successor_states = get_successor_states(state, board_size, player_colour)
-    for successor_state in successor_states:
-        beta = min(beta, max_value(successor_state, board_size, alpha, beta, depth+1, (player_colour+1) % 2))
-        if beta <= alpha:
-            return alpha
-
-    return beta
-
-
-def cutoff_test(state, depth):
-    # cutoff_depth or terminal_state
-    if depth == 4:
-        return True
-
-    return False
-
-def eval_func(self, state):
-    
-    def win_distance_difference(state, board_size, player_colour):
-
-        def starting_edge_red(state):
-
-            # record the frequencies of the different tile colours/types on both the starting
-            # and ending goal edges for red
-            r = 0
-            tile_dict_start = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
+    def get_successor_states(self, state, board_size, player_colour):
+        # Create successor for the moves using the player colour
+        successor_states = []
+        
+        #print("get_succ_state call")
+        #print_state(state)
+        for r in range(board_size):
             for q in range(board_size):
-                tile_dict_start[state[r][q]] += 1
+                if state[r][q] == Tile.EMPTY:
+                    new_state = SuccessorState(copy.deepcopy(state), r, q, player_colour, board_size)
+                    successor_states.append(new_state)
+            
+        #print_state(state)
+        return successor_states
 
-            r = board_size - 1
-            tile_dict_end = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
-            for q in range(board_size):
-                tile_dict_end[state[r][q]] += 1
+    def cutoff_test(self, state, depth):
+        # cutoff_depth or terminal_state
+        if depth == 3:
+            return True
 
-            # return the edge with the fewest blue tiles, if a tie occurs
-            # return the edge with the most red tiles
-            if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
-                return BoardEdge.RED_END
-            elif tile_dict_end[Tile.BLUE] - tile_dict_start[Tile.BLUE]:
-                return BoardEdge.RED_START
-            else:
-                if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
+        return False
+
+    def eval_func(self, state):
+
+        #print("state at start of eval()")
+        #print_state(state)
+        
+        def win_distance_difference(state, board_size, player_colour):
+
+            def starting_edge_red(state):
+
+                # record the frequencies of the different tile colours/types on both the starting
+                # and ending goal edges for red
+                r = 0
+                tile_dict_start = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
+                for q in range(board_size):
+                    tile_dict_start[state[r][q]] += 1
+
+                r = board_size - 1
+                tile_dict_end = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
+                for q in range(board_size):
+                    tile_dict_end[state[r][q]] += 1
+
+                # return the edge with the fewest blue tiles, if a tie occurs
+                # return the edge with the most red tiles
+                if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
+                    return BoardEdge.RED_END
+                elif tile_dict_end[Tile.BLUE] - tile_dict_start[Tile.BLUE]:
                     return BoardEdge.RED_START
                 else:
-                    return BoardEdge.RED_END
+                    if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
+                        return BoardEdge.RED_START
+                    else:
+                        return BoardEdge.RED_END
 
-        def starting_edge_blue(state):
+            def starting_edge_blue(state):
 
-            # record the frequencies of the different tile colours/types on both the starting
-            # and ending goal edges for blue
-            q = 0
-            tile_dict_start = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
-            for r in range(board_size):
-                tile_dict_start[state[r][q]] += 1
+                # record the frequencies of the different tile colours/types on both the starting
+                # and ending goal edges for blue
+                q = 0
+                tile_dict_start = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
+                for r in range(board_size):
+                    tile_dict_start[state[r][q]] += 1
 
-            q = board_size - 1
-            tile_dict_end = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
-            for r in range(board_size):
-                tile_dict_end[state[r][q]] += 1
+                q = board_size - 1
+                tile_dict_end = {Tile.RED: 0, Tile.BLUE: 0, Tile.EMPTY: 0}
+                for r in range(board_size):
+                    tile_dict_end[state[r][q]] += 1
 
-            # return the edge with the fewest red tiles, if a tie occurs
-            # return the edge with the most rbluetiles
-            if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
-                return BoardEdge.BLUE_END
-            elif tile_dict_end[Tile.RED] - tile_dict_start[Tile.RED]:
-                return BoardEdge.BLUE_START
-            else:
-                if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
+                # return the edge with the fewest red tiles, if a tie occurs
+                # return the edge with the most rbluetiles
+                if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
+                    return BoardEdge.BLUE_END
+                elif tile_dict_end[Tile.RED] - tile_dict_start[Tile.RED]:
                     return BoardEdge.BLUE_START
                 else:
-                    return BoardEdge.BLUE_END
+                    if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
+                        return BoardEdge.BLUE_START
+                    else:
+                        return BoardEdge.BLUE_END
 
-        # if starting at start edge have init start node (0, 0)
-        # if starting at end edge have init start node (0, board_size - 1)
-        starting_edge = starting_edge_blue(state)
-        q = 0 if starting_edge == BoardEdge.BLUE_START else board_size - 1
-        goal_edge = BoardEdge.BLUE_END if starting_edge == BoardEdge.BLUE_START else BoardEdge.BLUE_START
-        min_win_dist_blue = inf
-        for r in range(board_size):
-            if state[r][q] == Tile.RED: pass
-            temp_path_cost = search_path(state, Tile.BLUE, board_size, (r, q), goal_edge, Mode.WIN_DIST)
-            if temp_path_cost < min_win_dist_blue:
-                min_win_dist_blue = temp_path_cost
-        
-        # if starting at start edge have init start node (0, 0)
-        # if starting at end edge have init start node (0, board_size - 1)
-        starting_edge = starting_edge_red(state)
-        r = 0 if starting_edge == BoardEdge.RED_START else board_size - 1
-        goal_edge = BoardEdge.RED_END if starting_edge == BoardEdge.RED_START else BoardEdge.RED_START
-        min_win_dist_red = inf
-        for q in range(board_size):
-            if state[r][q] == Tile.BLUE: pass
-            temp_path_cost = search_path(state, Tile.BLUE, board_size, (r, q), goal_edge, Mode.WIN_DIST)
-            if temp_path_cost < min_win_dist_red:
-                min_win_dist_red = temp_path_cost
+            # if starting at start edge have init start node (0, 0)
+            # if starting at end edge have init start node (0, board_size - 1)
+            starting_edge = starting_edge_blue(state)
+            q = 0 if starting_edge == BoardEdge.BLUE_START else board_size - 1
+            goal_edge = BoardEdge.BLUE_END if starting_edge == BoardEdge.BLUE_START else BoardEdge.BLUE_START
+            min_win_dist_blue = board_size * 2
+            for r in range(board_size):
+                if state[r][q] == Tile.RED: pass
+                temp_path_cost = search_path(state, Tile.BLUE, board_size, (r, q), goal_edge, Mode.WIN_DIST)
+                if temp_path_cost and temp_path_cost < min_win_dist_blue:
+                    min_win_dist_blue = temp_path_cost
+            
+            # if starting at start edge have init start node (0, 0)
+            # if starting at end edge have init start node (0, board_size - 1)
+            starting_edge = starting_edge_red(state)
+            r = 0 if starting_edge == BoardEdge.RED_START else board_size - 1
+            goal_edge = BoardEdge.RED_END if starting_edge == BoardEdge.RED_START else BoardEdge.RED_START
+            min_win_dist_red = board_size * 2
+            for q in range(board_size):
+                if state[r][q] == Tile.BLUE: pass
+                temp_path_cost = search_path(state, Tile.RED, board_size, (r, q), goal_edge, Mode.WIN_DIST)
+                if temp_path_cost and temp_path_cost < min_win_dist_red:
+                    min_win_dist_red = temp_path_cost
 
-        # return win distance difference value such that higher is better for our colour
-        win_dist_diff = min_win_dist_red - min_win_dist_blue
-        return win_dist_diff if player_colour == Tile.BLUE else -win_dist_diff
+            #print(min_win_dist_blue)
+            #print(min_win_dist_red)
+            # return win distance difference value such that higher is better for our colour
+            win_dist_diff = min_win_dist_red - min_win_dist_blue
+            return win_dist_diff if player_colour == Tile.BLUE else -win_dist_diff
 
-    win_dist_diff = win_distance_difference(state, self.board_size, self.player_colour)
-    evaluation = 1 * win_dist_diff
-    return evaluation
+        win_dist_diff = win_distance_difference(state, self.board_size, self.player_colour)
+        evaluation = 1 * win_dist_diff
+        return evaluation
 
 
+    # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
+    # player_colour
+    def max_value(self, state, board_size, alpha, beta, depth, player_colour):
+        if self.cutoff_test(state, depth):
+            return self.eval_func(state)
 
-def get_successor_states(state, board_size, player_colour):
-    # Create successor for the moves using the player colour
-    successor_states = []
+        #print("state at start of max_value()")
+        #print_state(state)
 
-    for r in range(board_size):
-        for q in range(board_size):
-            successor_states.append(SuccessorState(state[:], r, q, player_colour, board_size))
+        successor_states = self.get_successor_states(state.copy(), board_size, player_colour)
+        for successor_state in successor_states:
+            alpha = max(alpha, self.min_value(successor_state.state, board_size, alpha, beta, depth+1, Tile((player_colour.value + 1) % 2)))
+            if alpha >= beta:
+                return beta
 
-    return successor_states
+        return alpha
 
+
+    def min_value(self, state, board_size, alpha, beta, depth, player_colour):
+        if self.cutoff_test(state, depth):
+            return self.eval_func(state)
+
+        #print("state at start of min_value()")
+        #print_state(state)
+
+        successor_states = self.get_successor_states(state.copy(), board_size, player_colour)
+        for successor_state in successor_states:
+            beta = min(beta, self.max_value(successor_state.state, board_size, alpha, beta, depth+1, Tile((player_colour.value + 1) % 2)))
+            if beta <= alpha:
+                return alpha
+
+        return beta
 
 class SuccessorState:
+
     def __init__(self, state, move_r, move_q, player_colour, board_size):
-        self.state = state
+        self.state = state.copy()
         self.move_r = move_r
         self.move_q = move_q
         self.player_colour = player_colour
         self.board_size = board_size
 
+        #print("state before apply move")
+        #print_state(state)
         self.apply_move()
+        #print("state after apply move")
+        #print_state(state)
 
     def apply_move(self):
         # Change the cell to player's colour
@@ -223,7 +254,7 @@ class SuccessorState:
         board_size = self.board_size
 
         cells_to_remove = []
-        opponent_colour = (self.player_colour+1) % 2
+        opponent_colour = Tile((self.player_colour.value + 1) % 2)
 
         # Check for possible captures and tag the cells to be removed from captures
         # ----------------------------------Opposite Colour Adjacent Cases-------------------------------------------

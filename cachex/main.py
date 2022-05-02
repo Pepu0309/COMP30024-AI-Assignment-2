@@ -11,7 +11,7 @@ import pygame as pg
 
 def main():
 
-    game = Game(SIZE, False, True)
+    game = Game(SIZE, True, False)
     game.load_data()
 
     # button initializing
