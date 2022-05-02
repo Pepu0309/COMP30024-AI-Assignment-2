@@ -8,7 +8,6 @@
     ],
     "start": [1, 0],
     "goal_edge": "blue_end",
-    "last_move": [3, 2],
     "player_colour": "blue",
     "mode": "eval"
 }

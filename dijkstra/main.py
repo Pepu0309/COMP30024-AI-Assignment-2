@@ -1,9 +1,29 @@
 """
 COMP30024 Artificial Intelligence, Semester 1, 2022
-Project Part A: Searching
+Project Part B:
 
-This script contains the entry point to the program (the code in
-`__main__.py` calls `main()`). Your solution starts here!
+This script contains the allows testing of dijkstra's implementation used
+for evaluating cachex positions and checking if the game has been won.
+
+Called from root folder as follows:
+python3 -m dijkstra <path to test.json>
+
+JSON example schema:
+
+{
+    "n": 5,
+    "board": [
+        ["blue", 1, 0],
+        ["blue", 1, 1],
+        ["blue", 1, 3],
+        ["blue", 3, 2]
+    ],
+    "start": [1, 0],
+    "goal_edge": "blue_end",
+    "player_colour": "blue",
+    "mode": "eval"
+}
+
 """
 
 import sys, json
@@ -18,22 +38,12 @@ from tenuOS.player import Player
 from util.enums import *
 from dijkstra.util import *
 
-debug = False
-
-enum_conversions = {
-    "eval": Mode.WIN_DIST,
-    "win_test": Mode.WIN_TEST,
-    "blue": Tile.BLUE,
-    "red": Tile.RED,
-    "empty": Tile.EMPTY,
-    "blue_start": GoalEdge.BLUE_START,
-    "blue_end": GoalEdge.BLUE_END,
-    "red_start": GoalEdge.RED_START,
-    "red_end": GoalEdge.RED_END,
-}
-
 def main():
+    """
+    Main program for testing dijkstra on test board state, using json input file
+    """
 
+    # convert json input to a dict
     try:
         with open(sys.argv[1]) as file:
             data = json.load(file)
@@ -41,6 +51,7 @@ def main():
         print("usage: python3 -m search path/to/input.json", file=sys.stderr)
         sys.exit(1)
 
+    # store variables from dict as correct data type, converting to enums if needed
     state = state_from_json(data)
     player_colour = enum_conversions[data["player_colour"]]
     board_size = int(data["n"])
@@ -48,26 +59,34 @@ def main():
     goal_edge = enum_conversions[data["goal_edge"]]
     mode = enum_conversions[data["mode"]]
 
+    # create dict of occupied cells in format:  (r, q): "colour"
     board_dict = {}
     for tile in data["board"]:
         coord = (tile[1], tile[2])
         board_dict[coord] = tile[0]
 
+    # print the board
     print_board(board_size, board_dict, "THE BOARD")
 
+    # print the state
     print_state(state)
 
+    # print initial variable values
     print("board size = " + str(board_size))
     print("player colour = " + str(player_colour))
     print("start coords = " + str(start))
     print("mode = " + str(mode))
     print("goal edge = " + str(goal_edge))
 
+    # print path cost of shortest path sing dijkstra
     path_cost = search_path(state, player_colour, board_size, start, goal_edge, mode)
     print("\npath cost = " + str(path_cost) + "\n")
 
 def state_from_json(data):
-
+    """
+    Takes the dictionary form of the input json and returns a 
+    2D array representing the current board state 
+    """
     state = []
     board_size = int(data["n"])
     for r in range(board_size):
@@ -82,7 +101,9 @@ def state_from_json(data):
     return state
 
 def print_state(state):
-
+    """
+    Prints the current state to console
+    """
     print("\nstate as a grid: \n")
     for r in reversed(state):
         for q in r:

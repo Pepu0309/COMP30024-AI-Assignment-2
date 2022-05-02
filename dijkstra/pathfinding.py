@@ -5,7 +5,7 @@ import heapq
 
 from dijkstra.util import print_coordinate
 from util.enums import *
-
+from util.general import is_valid_cell
 
 class Node:
     """
@@ -57,7 +57,7 @@ class Node:
         Returns true if, for the given use case as defined by mode, the
         current node can be traversed while graph is being searched.
         """
-        if self.out_of_bounds(n): 
+        if not is_valid_cell(self.r, self.q, n): 
             #print("out of bounds")
             return True
         else:
@@ -69,12 +69,6 @@ class Node:
             #print("mode is win_test, and colour is opposite or empty,, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         return False        
-
-    def out_of_bounds(self, n):
-        """
-        Returns True if the node is outside cachex board boundaries.
-        """
-        return not ((0 <= self.r < n) and (0 <= self.q < n))
 
     def print_node_coords(self):
         """
@@ -181,7 +175,7 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     start_node = Node(start_coords, state)
 
     # return None and post error if starting node is out of bounds
-    if start_node.out_of_bounds(board_size):
+    if not is_valid_cell(start_node.r, start_node.q, board_size):
         print("pathfinding error: starting node out of bounds", file=sys.stderr)
         return None
 

@@ -14,3 +14,15 @@ class GoalEdge(Enum):
     BLUE_END = 1
     RED_START = 2
     RED_END = 3
+
+enum_conversions = {
+    "eval": Mode.WIN_DIST,
+    "win_test": Mode.WIN_TEST,
+    "blue": Tile.BLUE,
+    "red": Tile.RED,
+    "empty": Tile.EMPTY,
+    "blue_start": GoalEdge.BLUE_START,
+    "blue_end": GoalEdge.BLUE_END,
+    "red_start": GoalEdge.RED_START,
+    "red_end": GoalEdge.RED_END,
+}
