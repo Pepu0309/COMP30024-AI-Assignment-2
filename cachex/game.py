@@ -8,9 +8,9 @@ Please use this code for testing purposes only, do not copy anything directly to
 import pygame as pg
 import sys
 from os import path
-from funcs import *
-from button import *
-#from player import Player
+from cachex.funcs import *
+from cachex.button import *
+from tenuOS.player import Player
 
 class Game:
     def __init__(self, size, with_ai, sound_state):

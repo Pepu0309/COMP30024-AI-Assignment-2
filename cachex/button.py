@@ -1,4 +1,4 @@
-from funcs import *
+from cachex.funcs import *
 
 
 class Button:
