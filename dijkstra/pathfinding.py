@@ -198,13 +198,13 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
 
     # temporary method of testing which doesnt hardcode one of the 4 tests
     def win_test(node):
-        if goal_edge == GoalEdge.BLUE_START:
+        if goal_edge == BoardEdge.BLUE_START:
             return node.q == 0
-        elif goal_edge == GoalEdge.BLUE_END:
+        elif goal_edge == BoardEdge.BLUE_END:
             return node.q == board_size
-        elif goal_edge == GoalEdge.RED_START:
+        elif goal_edge == BoardEdge.RED_START:
             return node.r == 0
-        elif goal_edge == GoalEdge.RED_END:
+        elif goal_edge == BoardEdge.RED_END:
             return node.r == board_size
 
     # initialise starting NodeCost obj with path cost 0 and insert into new pq        

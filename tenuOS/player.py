@@ -124,14 +124,14 @@ def eval_func(self, state):
             # return the edge with the fewest blue tiles, if a tie occurs
             # return the edge with the most red tiles
             if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
-                return GoalEdge.RED_END
+                return BoardEdge.RED_END
             elif tile_dict_end[Tile.BLUE] - tile_dict_start[Tile.BLUE]:
-                return GoalEdge.RED_START
+                return BoardEdge.RED_START
             else:
                 if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
-                    return GoalEdge.RED_START
+                    return BoardEdge.RED_START
                 else:
-                    return GoalEdge.RED_END
+                    return BoardEdge.RED_END
 
         def starting_edge_blue(state):
 
@@ -150,20 +150,20 @@ def eval_func(self, state):
             # return the edge with the fewest red tiles, if a tie occurs
             # return the edge with the most rbluetiles
             if tile_dict_start[Tile.RED] > tile_dict_end[Tile.RED]:
-                return GoalEdge.BLUE_END
+                return BoardEdge.BLUE_END
             elif tile_dict_end[Tile.RED] - tile_dict_start[Tile.RED]:
-                return GoalEdge.BLUE_START
+                return BoardEdge.BLUE_START
             else:
                 if tile_dict_start[Tile.BLUE] > tile_dict_end[Tile.BLUE]:
-                    return GoalEdge.BLUE_START
+                    return BoardEdge.BLUE_START
                 else:
-                    return GoalEdge.BLUE_END
+                    return BoardEdge.BLUE_END
 
         # if starting at start edge have init start node (0, 0)
         # if starting at end edge have init start node (0, board_size - 1)
         starting_edge = starting_edge_blue(state)
-        q = 0 if starting_edge == GoalEdge.BLUE_START else board_size - 1
-        goal_edge = GoalEdge.BLUE_END if starting_edge == GoalEdge.BLUE_START else GoalEdge.BLUE_START
+        q = 0 if starting_edge == BoardEdge.BLUE_START else board_size - 1
+        goal_edge = BoardEdge.BLUE_END if starting_edge == BoardEdge.BLUE_START else BoardEdge.BLUE_START
         min_win_dist_blue = inf
         for r in range(board_size):
             if state[r][q] == Tile.RED: pass
@@ -174,8 +174,8 @@ def eval_func(self, state):
         # if starting at start edge have init start node (0, 0)
         # if starting at end edge have init start node (0, board_size - 1)
         starting_edge = starting_edge_red(state)
-        r = 0 if starting_edge == GoalEdge.RED_START else board_size - 1
-        goal_edge = GoalEdge.RED_END if starting_edge == GoalEdge.RED_START else GoalEdge.RED_START
+        r = 0 if starting_edge == BoardEdge.RED_START else board_size - 1
+        goal_edge = BoardEdge.RED_END if starting_edge == BoardEdge.RED_START else BoardEdge.RED_START
         min_win_dist_red = inf
         for q in range(board_size):
             if state[r][q] == Tile.BLUE: pass

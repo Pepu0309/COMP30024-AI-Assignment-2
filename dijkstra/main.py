@@ -53,11 +53,11 @@ def main():
 
     # store variables from dict as correct data type, converting to enums if needed
     state = state_from_json(data)
-    player_colour = enum_conversions[data["player_colour"]]
+    player_colour = ENUM_CONVERSIONS[data["player_colour"]]
     board_size = int(data["n"])
     start = tuple(data["start"])
-    goal_edge = enum_conversions[data["goal_edge"]]
-    mode = enum_conversions[data["mode"]]
+    goal_edge = ENUM_CONVERSIONS[data["goal_edge"]]
+    mode = ENUM_CONVERSIONS[data["mode"]]
 
     # create dict of occupied cells in format:  (r, q): "colour"
     board_dict = {}
@@ -96,7 +96,7 @@ def state_from_json(data):
             board_row.append(Tile.EMPTY)
     
     for tile in data["board"]:
-        state[tile[1]][tile[2]] = enum_conversions[tile[0]]
+        state[tile[1]][tile[2]] = ENUM_CONVERSIONS[tile[0]]
 
     return state
 
