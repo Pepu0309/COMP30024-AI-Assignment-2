@@ -30,6 +30,9 @@ class Player:
         #     for q in range(self.board_size):
         #         board_row.append(util.constants.EMPTY)
         self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
+        self.turn = 0
+        self.my_last_move = None
+        self.opponent_last_move = None
 
     def action(self):
         """
@@ -42,6 +45,12 @@ class Player:
 
         # print("state at start of action()")
         # print_state(self.board_state)
+
+        if self.turn == 0:
+            return ("PLACE", self.board_size-1, self.board_size-2)
+
+        if self.turn == 1:
+            return ("PLACE", self.board_size/2, self.board_size/2)
 
         best_move = None
         for successor_state in self.get_successor_states(self.board_state, self.board_size, self.player_colour):
@@ -86,6 +95,7 @@ class Player:
         # print_state(self.board_state)
 
         # Steal doesn't have r and q, need to store previous move or something, will deal with it in action.
+        self.turn += 1
 
     def cutoff_test(self, state, depth):
         # cutoff_depth or terminal_state
