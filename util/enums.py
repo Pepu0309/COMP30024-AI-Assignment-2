@@ -18,9 +18,9 @@ class BoardEdge(Enum):
 ENUM_CONVERSIONS = {
     "eval": Mode.WIN_DIST,
     "win_test": Mode.WIN_TEST,
-    "blue": Tile.BLUE,
-    "red": Tile.RED,
-    "empty": Tile.EMPTY,
+    #"blue": Tile.BLUE,
+    #"red": Tile.RED,
+    #"empty": util.constants.EMPTY,
     "blue_start": BoardEdge.BLUE_START,
     "blue_end": BoardEdge.BLUE_END,
     "red_start": BoardEdge.RED_START,

@@ -94,7 +94,7 @@ def state_from_json(data):
         board_row = []
         state.append(board_row)
         for q in range(board_size):
-            board_row.append(Tile.EMPTY)
+            board_row.append(util.constants.EMPTY)
     
     for tile in data["board"]:
         state[tile[1]][tile[2]] = ENUM_CONVERSIONS[tile[0]]
