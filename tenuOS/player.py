@@ -44,8 +44,6 @@ class Player:
         alpha = -(float('inf'))
         beta = float('inf')
 
-        # print("state at start of action()")
-        # print_state(self.board_state)
         move = None
 
         # -------------------------------------------Opening Playbook--------------------------------------------------
@@ -75,19 +73,19 @@ class Player:
                 # For each move their, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
                 # the potential moves available to us in this current turn.
-                cur_move_value = self.min_value(successor_state.state, self.board_size, alpha, beta, 1, self.player_colour)
+                cur_move_value = self.min_value(successor_state.state, self.board_size, alpha, beta, 1, (self.player_colour + 1) %2)
                 gc.collect()
 
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
 
-            # print(best_move)
+
 
             move = ("PLACE", best_move.move_r, best_move.move_q)
 
         self.my_last_move = move
-        print(move)
+        # print(move)
         return move
     
     def turn(self, player, action):
@@ -102,7 +100,6 @@ class Player:
         above. However, the referee has validated it at this point.
         """
         # put your code here
-        print("here")
         if player == "red":
             player_colour = util.constants.RED
         elif player == "blue":
@@ -121,7 +118,6 @@ class Player:
             self.board_state[q][r] = util.constants.EMPTY
 
         self.board_state[r][q] = player_colour
-        print(self.board_state)
 
         if player_colour == self.player_colour:
             self.my_last_move = action
@@ -233,6 +229,7 @@ class Player:
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
         evaluation = 0.3 * win_dist_diff + 0.5 * tile_difference + 0.2 * two_bridge_count_diff
+        print(state)
         return evaluation
 
     def tile_difference(self, state):
@@ -252,7 +249,6 @@ class Player:
         player_two_bridge_count = 0
         opponent_two_bridge_count = 0
 
-        print(state)
         for r in range(self.board_size):
             for q in range(self.board_size):
                 if state[r][q] != util.constants.EMPTY:
@@ -263,8 +259,7 @@ class Player:
                     elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
                         opponent_two_bridge_count += two_bridge_check("count", state, r, q,
                                                                     self.board_size, cur_cell_occupied_colour)
-        print(player_two_bridge_count)
-        print(opponent_two_bridge_count)
+
         return player_two_bridge_count - opponent_two_bridge_count
 
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
@@ -272,9 +267,6 @@ class Player:
     def max_value(self, state, board_size, alpha, beta, depth, player_colour):
         if self.cutoff_test(state, depth):
             return self.eval_func(state)
-
-        #print("state at start of max_value()")
-        #print_state(state)
 
         successor_states = self.get_successor_states(state, board_size, player_colour)
         for successor_state in successor_states:
@@ -289,9 +281,6 @@ class Player:
         if self.cutoff_test(state, depth):
             return self.eval_func(state)
 
-        #print("state at start of min_value()")
-        #print_state(state)
-
         successor_states = self.get_successor_states(state, board_size, player_colour)
         for successor_state in successor_states:
             beta = min(beta, self.max_value(successor_state.state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
@@ -301,11 +290,7 @@ class Player:
         return beta
 
     def get_successor_states(self, state, board_size, player_colour):
-        # Create successor for the moves using the player colour
         successor_states = []
-        # print(state.copy())
-        # print("get_succ_state call")
-        # print_state(state)
         for r in range(board_size):
             for q in range(board_size):
                 if state[r][q] == util.constants.EMPTY:
