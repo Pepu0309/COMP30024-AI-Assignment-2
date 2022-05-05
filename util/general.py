@@ -4,8 +4,6 @@ def is_valid_cell(r, q, board_size):
 def is_connected_diagonal(r, q, board_size):
     return ((r + q) + 1 == board_size)
 
-
-
 def print_state(state):
     """
     Prints the current state to console

@@ -229,34 +229,43 @@ class Player:
             win_dist_diff = min_win_dist_red - min_win_dist_blue
             return win_dist_diff if player_colour == util.constants.BLUE else -win_dist_diff
 
-        def tile_difference():
-            player_tile_count = 0
-            opponent_tile_count = 0
-            for r in range(self.board_size):
-                for q in range(self.board_size):
-                    if self.board_state[r][q] == self.player_colour:
-                        player_tile_count += 1
-                    elif self.board_state[r][q] == (self.player_colour + 1) % 2:
-                        opponent_tile_count += 1
-
-            tile_difference = player_tile_count - opponent_tile_count
-            return tile_difference
-
-        # def two_bridge_count_diff():
-        #     player_two_bridge_count = 0
-        #     opponent_two_bridge_count = 0
-        #
-        #     for r in range(self.board_size):
-        #         for q in range(self.board_size):
-
-
-
-
         win_dist_diff = win_distance_difference(state, self.board_size, self.player_colour)
-        tile_difference = tile_difference()
-        evaluation = 0.5 * win_dist_diff + 0.5 * tile_difference
+        tile_difference = self.tile_difference(state)
+        two_bridge_count_diff = self.two_bridge_count_diff(state)
+        evaluation = 0.3 * win_dist_diff + 0.5 * tile_difference + 0.2 * two_bridge_count_diff
         return evaluation
 
+    def tile_difference(self, state):
+        player_tile_count = 0
+        opponent_tile_count = 0
+        for r in range(self.board_size):
+            for q in range(self.board_size):
+                if state[r][q] == self.player_colour:
+                    player_tile_count += 1
+                elif state[r][q] == (self.player_colour + 1) % 2:
+                    opponent_tile_count += 1
+
+        tile_difference = player_tile_count - opponent_tile_count
+        return tile_difference
+
+    def two_bridge_count_diff(self, state):
+        player_two_bridge_count = 0
+        opponent_two_bridge_count = 0
+
+        print(state)
+        for r in range(self.board_size):
+            for q in range(self.board_size):
+                if state[r][q] != util.constants.EMPTY:
+                    cur_cell_occupied_colour = state[r][q]
+                    if cur_cell_occupied_colour == self.player_colour:
+                        player_two_bridge_count += two_bridge_check("count", state, r, q,
+                                                                    self.board_size, cur_cell_occupied_colour)
+                    elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
+                        opponent_two_bridge_count += two_bridge_check("count", state, r, q,
+                                                                    self.board_size, cur_cell_occupied_colour)
+        print(player_two_bridge_count)
+        print(opponent_two_bridge_count)
+        return player_two_bridge_count - opponent_two_bridge_count
 
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
     # player_colour
@@ -401,11 +410,12 @@ mode: A parameters which functions like a flag. Either "capture" or "count" shou
 state: A parameter which is the board state to evaluate. Either a 2D numpy array (what we use) or a 2D Python list.
 r: r-coordinate of the move to be evaluated in a capture or two-bridge count.
 q: q-coordinate of the move to be evaluated in a capture or two-bridge count.
-player_colour: Optional parameter; used with "capture". The current player's colour.
-cells_to_remove: Optional parameter; used with "capture". A list of the moves to be removed that is returned to the 
-             calling function.
+board_size: The size of the board the Cachex game is being played on.
+player_colour: The player_colour of the move to check.
+cells_to_remove: Optional parameter; used with "capture". A list of the moves to be removed that is passed in by the
+                 calling function and returned to them.
 """
-def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remove):
+def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remove = None):
     # If we're trying to check for and apply captures in a 2-bridge, then we're checking for opponent_colour
     # in the 2 adjacent cells in between the 2-bridge. If we're trying to count the number of 2 bridges, then we want
     # the 2 adjacent cells in between the 2-bridge to be empty.
@@ -415,6 +425,10 @@ def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remo
         opponent_colour = util.constants.EMPTY
 
     two_bridge_count = 0
+    # For counting, we only need to check the 2-bridges to the top. Any 2-bridges towards the bottom will be picked up
+    # by a later check from the bottom to the top. This avoids counting duplicates. For capture-checking, we need to
+    # check in all 6 directions.
+
     # If there is an occupied cell of the same colour distance 2 away above this current move
     if is_valid_cell(r + 2, q - 1, board_size):
         if state[r + 2][q - 1] == player_colour:
@@ -441,45 +455,6 @@ def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remo
                     elif mode == "count":
                         two_bridge_count += 1
 
-    # If there is an occupied cell of the same colour distance 2 away to the bottom-left of this current move.
-    if is_valid_cell(r - 1, q - 1, board_size):
-        if state[r - 1][q - 1] == player_colour:
-            # Then, if there's also occupied cells belonging to the opponent distance 1 to the left and bottom left
-            # of this move, this move is a capture.
-            if is_valid_cell(r, q - 1, board_size) and is_valid_cell(r - 1, q, board_size):
-                if state[r][q - 1] == opponent_colour and state[r - 1][q]:
-                    if mode == "capture":
-                        cells_to_remove.append((r, q - 1))
-                        cells_to_remove.append((r - 1, q))
-                    elif mode == "count":
-                        two_bridge_count += 1
-
-    # If there is an occupied cell of the same colour distance 2 away to the bottom of this current move
-    if is_valid_cell(r - 2, q + 1, board_size):
-        if state[r - 2][q + 1] == player_colour:
-            # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom left and
-            # bottom right of this move, then this move is a capture.
-            if is_valid_cell(r - 1, q, board_size) and is_valid_cell(r - 1, q + 1, board_size):
-                if state[r - 1][q] == opponent_colour and state[r - 1][q + 1] == opponent_colour:
-                    if mode == "capture":
-                        cells_to_remove.append((r - 1, q))
-                        cells_to_remove.append((r - 1, q + 1))
-                    elif mode == "count":
-                        two_bridge_count += 1
-
-    # If there is an occupied cell of the same colour distance 2 away to the bottom right of this current move
-    if is_valid_cell(r - 1, q + 2, board_size):
-        if state[r - 1][q + 2] == player_colour:
-            # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom right and
-            # right of this move, then this move is a capture.
-            if is_valid_cell(r - 1, q + 1, board_size) and is_valid_cell(r, q + 1, board_size):
-                if state[r - 1][q + 1] == opponent_colour and state[r][q + 1] == opponent_colour:
-                    if mode == "capture":
-                        cells_to_remove.append((r - 1, q + 1))
-                        cells_to_remove.append((r, q + 1))
-                    elif mode == "count":
-                        two_bridge_count += 1
-
     # If there is an occupied cell of the same colour distance 2 away to the top right of this current move
     if is_valid_cell(r + 1, q + 1, board_size):
         if state[r + 1][q + 1] == player_colour:
@@ -492,6 +467,47 @@ def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remo
                         cells_to_remove.append((r + 1, q))
                     elif mode == "count":
                         two_bridge_count += 1
+
+    # Only check the bottom cases when checking for capture
+    if mode == "capture":
+        # If there is an occupied cell of the same colour distance 2 away to the bottom-left of this current move.
+        if is_valid_cell(r - 1, q - 1, board_size):
+            if state[r - 1][q - 1] == player_colour:
+                # Then, if there's also occupied cells belonging to the opponent distance 1 to the left and bottom left
+                # of this move, this move is a capture.
+                if is_valid_cell(r, q - 1, board_size) and is_valid_cell(r - 1, q, board_size):
+                    if state[r][q - 1] == opponent_colour and state[r - 1][q]:
+                        if mode == "capture":
+                            cells_to_remove.append((r, q - 1))
+                            cells_to_remove.append((r - 1, q))
+                        elif mode == "count":
+                            two_bridge_count += 1
+
+        # If there is an occupied cell of the same colour distance 2 away to the bottom of this current move
+        if is_valid_cell(r - 2, q + 1, board_size):
+            if state[r - 2][q + 1] == player_colour:
+                # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom left and
+                # bottom right of this move, then this move is a capture.
+                if is_valid_cell(r - 1, q, board_size) and is_valid_cell(r - 1, q + 1, board_size):
+                    if state[r - 1][q] == opponent_colour and state[r - 1][q + 1] == opponent_colour:
+                        if mode == "capture":
+                            cells_to_remove.append((r - 1, q))
+                            cells_to_remove.append((r - 1, q + 1))
+                        elif mode == "count":
+                            two_bridge_count += 1
+
+        # If there is an occupied cell of the same colour distance 2 away to the bottom right of this current move
+        if is_valid_cell(r - 1, q + 2, board_size):
+            if state[r - 1][q + 2] == player_colour:
+                # Then, if there's also occupied cells belonging to the opponent distance 1 to the bottom right and
+                # right of this move, then this move is a capture.
+                if is_valid_cell(r - 1, q + 1, board_size) and is_valid_cell(r, q + 1, board_size):
+                    if state[r - 1][q + 1] == opponent_colour and state[r][q + 1] == opponent_colour:
+                        if mode == "capture":
+                            cells_to_remove.append((r - 1, q + 1))
+                            cells_to_remove.append((r, q + 1))
+                        elif mode == "count":
+                            two_bridge_count += 1
 
     if mode == "capture":
         return cells_to_remove
