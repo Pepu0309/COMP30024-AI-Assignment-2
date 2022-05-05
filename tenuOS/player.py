@@ -121,13 +121,13 @@ class Player:
             q = action[2]
         elif action[0] == "STEAL":
             if player_colour == self.player_colour:
-                r = self.opponent_last_move[1]
-                q = self.opponent_last_move[2]
+                q = self.opponent_last_move[1]
+                r = self.opponent_last_move[2]
             else:
-                r = self.my_last_move[1]
-                q = self.my_last_move[2]
-            self.board_state[r][q] = util.constants.EMPTY
-            self.steal_coords = (q, r)
+                q = self.my_last_move[1]
+                r = self.my_last_move[2]
+            self.board_state[q][r] = util.constants.EMPTY
+            self.steal_coords = (r, q)
 
         self.board_state[r][q] = player_colour
         #print(self.board_state)
@@ -158,7 +158,7 @@ class Player:
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
-        evaluation = 0.3 * win_dist_diff + 0.4 * tile_difference + 0.3 * two_bridge_count_diff
+        evaluation = 0.4 * win_dist_diff + 0.5 * tile_difference + 0.1 * two_bridge_count_diff
 
         return evaluation
 
@@ -239,6 +239,8 @@ class Player:
         # return win distance difference value such that higher is better for our colour
         win_dist_diff = min_win_dist_red - min_win_dist_blue
         return win_dist_diff if player_colour == util.constants.BLUE else -win_dist_diff
+        # this is like 
+        # player_colour == BLUE ? min_win_dist_red - min_win_dist_blue : min_win_dist_blue - min_win_dist_red
 
     def tile_difference(self, state):
         player_tile_count = 0
@@ -298,6 +300,8 @@ class Player:
 
         successor_states = self.get_successor_states(successed_state.state, board_size, player_colour, successed_state.move, successed_state.prev_move)
         for successor_state in successor_states:
+            #if depth == 2:
+            #    print_state(successor_state.state)
             beta = min(beta, self.max_value(successor_state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
             if beta <= alpha:
                 return alpha
@@ -335,7 +339,7 @@ class Player:
             r, q = move[0] + 1, move[1]
             corners = 0
 
-            for layer in range(3):
+            for layer in range(2):
                 for i in range(6):
                     for j in range(layer):
                         if is_valid_cell(r, q, board_size) and (not checked[(r, q)]) and state[r][q] == util.constants.EMPTY:
