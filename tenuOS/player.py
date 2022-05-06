@@ -2,7 +2,6 @@ from cmath import inf
 from util.enums import *
 from dijkstra.pathfinding import search_path
 from util.general import *
-import copy
 import util.constants
 import numpy as np
 import gc
@@ -46,8 +45,6 @@ class Player:
         alpha = -(float('inf'))
         beta = float('inf')
 
-        # print("state at start of action()")
-        # print_state(self.board_state)
         move = None
 
         # -------------------------------------------Opening Playbook--------------------------------------------------
@@ -75,8 +72,6 @@ class Player:
             best_move = None
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
-            #print(my_last)
-            #print(opponent_last)
             for successor_state in self.get_successor_states(self.board_state, self.board_size, self.player_colour, opponent_last, my_last):
                 # For each move their, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
@@ -87,9 +82,6 @@ class Player:
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
-                    #print("hi")
-
-            # print(best_move)
 
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
@@ -152,7 +144,7 @@ class Player:
         """
 
         # cutoff_depth or terminal_state
-        if depth == 8:
+        if depth == 4:
             return True
 
         return False
@@ -168,7 +160,11 @@ class Player:
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
         # sum features according to weights
-        evaluation = 0.4 * win_dist_diff + 0.5 * tile_difference + 0.1 * two_bridge_count_diff
+        if win_dist_diff != 0:
+            print_state(state)
+            print(win_dist_diff)
+            print(tile_difference)
+        evaluation = 0.3 * win_dist_diff + 0.9 * tile_difference + -0.2 * two_bridge_count_diff
 
         return evaluation
 
@@ -198,25 +194,37 @@ class Player:
 
             # return the edge with the fewest red tiles, if a tie occurs
             # return the edge with the most rbluetiles
-            if edge_tile_freqs[START_IND][util.constants.RED] > edge_tile_freqs[END_IND][util.constants.RED]:
-                starting_edge_blue = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
-            elif edge_tile_freqs[END_IND][util.constants.RED] - edge_tile_freqs[START_IND][util.constants.RED]:
-                starting_edge_blue = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+            if edge_tile_freqs[START_IND][opposite_colour(colour)] > edge_tile_freqs[END_IND][opposite_colour(colour)]:
+                starting_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+            elif edge_tile_freqs[END_IND][opposite_colour(colour)] - edge_tile_freqs[START_IND][opposite_colour(colour)]:
+                starting_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
             else:
-                if edge_tile_freqs[START_IND][util.constants.BLUE] > edge_tile_freqs[END_IND][util.constants.BLUE]:
-                    starting_edge_blue = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+                if edge_tile_freqs[START_IND][colour] > edge_tile_freqs[END_IND][colour]:
+                    starting_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
                 else:
-                    starting_edge_blue = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+                    starting_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
 
             # if starting at start edge have init start node (0, 0)
             # if starting at end edge have init start node (0, board_size - 1)
-            axes[colour] = START_IND if starting_edge_blue == BoardEdge.BLUE_START else END_IND
-            goal_edge = BoardEdge.BLUE_END if starting_edge_blue == BoardEdge.BLUE_START else BoardEdge.BLUE_START
+            axes[colour] = START_IND if starting_edge == (BoardEdge.BLUE_START if colour == BLUE else BoardEdge.RED_START) else END_IND
+
+            if starting_edge == BoardEdge.BLUE_START:
+                goal_edge = BoardEdge.BLUE_END
+            elif starting_edge == BoardEdge.BLUE_END:
+                goal_edge = BoardEdge.BLUE_START
+            elif starting_edge == BoardEdge.RED_START:
+                goal_edge = BoardEdge.RED_END
+            elif starting_edge == BoardEdge.RED_END:
+                goal_edge = BoardEdge.RED_START
+
+            #goal_edge = BoardEdge.BLUE_END if starting_edge == BoardEdge.BLUE_START else BoardEdge.BLUE_START
+            temp_path_cost = None
             win_dists[colour] = self.board_size * 2
             for axes[opposite_colour(colour)] in range(self.board_size):
                 if state[r][q] == opposite_colour(colour): 
                     continue
                 temp_path_cost = search_path(state, colour, self.board_size, (r, q), goal_edge, Mode.WIN_DIST)
+                # if no path is found do not update win_distance
                 if temp_path_cost and temp_path_cost < win_dists[colour]:
                     win_dists[colour] = temp_path_cost
 
