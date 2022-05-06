@@ -1,3 +1,5 @@
+from util.constants import *
+
 def is_valid_cell(r, q, board_size):
     return 0 <= r < board_size and 0 <= q < board_size
 
@@ -14,3 +16,11 @@ def print_state(state):
             print(q, end = ", ")
         print("")
     print("")
+
+def opposite_colour(colour):
+    if colour == RED:
+        return BLUE
+    elif colour == BLUE:
+        return RED
+    else:
+        return EMPTY

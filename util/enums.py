@@ -1,4 +1,5 @@
 from enum import Enum
+from util.constants import *
 
 class Tile(Enum):
     BLUE = 0
@@ -18,9 +19,9 @@ class BoardEdge(Enum):
 ENUM_CONVERSIONS = {
     "eval": Mode.WIN_DIST,
     "win_test": Mode.WIN_TEST,
-    #"blue": Tile.BLUE,
-    #"red": Tile.RED,
-    #"empty": util.constants.EMPTY,
+    "blue": BLUE,
+    "red": RED,
+    "empty": EMPTY,
     "blue_start": BoardEdge.BLUE_START,
     "blue_end": BoardEdge.BLUE_END,
     "red_start": BoardEdge.RED_START,

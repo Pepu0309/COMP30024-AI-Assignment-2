@@ -8,6 +8,7 @@ import numpy as np
 import gc
 
 class Player:
+
     def __init__(self, player, n):
         """
         Called once at the beginning of a game to initialise this player.
@@ -17,7 +18,7 @@ class Player:
         play as Red, or the string "blue" if your player will play
         as Blue.
         """
-        # put your code here
+
         if player == "red":
             self.player_colour = util.constants.RED
         elif player == "blue":
@@ -41,7 +42,7 @@ class Player:
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
-        # put your code here
+
         alpha = -(float('inf'))
         beta = float('inf')
 
@@ -107,7 +108,6 @@ class Player:
         the same as what your player returned from the action method
         above. However, the referee has validated it at this point.
         """
-        # put your code here
         
         # store player colour using our own defined constants
         if player == "red":
@@ -150,9 +150,9 @@ class Player:
         Test a hypothetical state at a given depth and determine if either
         the terminal state has been reached or the depth limit has been reached.
         """
-        
+
         # cutoff_depth or terminal_state
-        if depth == 4:
+        if depth == 8:
             return True
 
         return False
@@ -163,7 +163,7 @@ class Player:
         """
 
         # calculate all features
-        win_dist_diff = self.win_distance_difference(state, self.board_size, self.player_colour)
+        win_dist_diff = self.win_distance_difference(state)
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
@@ -172,83 +172,57 @@ class Player:
 
         return evaluation
 
-    def win_distance_difference(self, state, board_size, player_colour):
+    def win_distance_difference(self, state):
 
-        # record the frequencies of the different tile colours/types on both the starting
-        # and ending goal edges for red
-        r = 0
-        tile_dict_start = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
-        for q in range(board_size):
-            tile_dict_start[state[r][q]] += 1
+        win_dists = {}
+        edge_tile_freqs = {}
 
-        r = board_size - 1
-        tile_dict_end = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
-        for q in range(board_size):
-            tile_dict_end[state[r][q]] += 1
-
-        # return the edge with the fewest blue tiles, if a tie occurs
-        # return the edge with the most red tiles
-        if tile_dict_start[util.constants.BLUE] > tile_dict_end[util.constants.BLUE]:
-            starting_edge_red = BoardEdge.RED_END
-        elif tile_dict_end[util.constants.BLUE] - tile_dict_start[util.constants.BLUE]:
-            starting_edge_red = BoardEdge.RED_START
-        else:
-            if tile_dict_start[util.constants.RED] > tile_dict_end[util.constants.RED]:
-                starting_edge_red = BoardEdge.RED_START
-            else:
-                starting_edge_red = BoardEdge.RED_END
-
-        # record the frequencies of the different tile colours/types on both the starting
-        # and ending goal edges for blue
-        q = 0
-        tile_dict_start = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
-        for r in range(board_size):
-            tile_dict_start[state[r][q]] += 1
-
-        q = board_size - 1
-        tile_dict_end = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
-        for r in range(board_size):
-            tile_dict_end[state[r][q]] += 1
-
-        # return the edge with the fewest red tiles, if a tie occurs
-        # return the edge with the most rbluetiles
-        if tile_dict_start[util.constants.RED] > tile_dict_end[util.constants.RED]:
-            starting_edge_blue = BoardEdge.BLUE_END
-        elif tile_dict_end[util.constants.RED] - tile_dict_start[util.constants.RED]:
-            starting_edge_blue = BoardEdge.BLUE_START
-        else:
-            if tile_dict_start[util.constants.BLUE] > tile_dict_end[util.constants.BLUE]:
-                starting_edge_blue = BoardEdge.BLUE_START
-            else:
-                starting_edge_blue = BoardEdge.BLUE_END
-
-        # if starting at start edge have init start node (0, 0)
-        # if starting at end edge have init start node (0, board_size - 1)
-        q = 0 if starting_edge_blue == BoardEdge.BLUE_START else board_size - 1
-        goal_edge = BoardEdge.BLUE_END if starting_edge_blue == BoardEdge.BLUE_START else BoardEdge.BLUE_START
-        min_win_dist_blue = board_size * 2
-        for r in range(board_size):
-            if state[r][q] == util.constants.RED: pass
-            temp_path_cost = search_path(state, util.constants.BLUE, board_size, (r, q), goal_edge, Mode.WIN_DIST)
-            if temp_path_cost and temp_path_cost < min_win_dist_blue:
-                min_win_dist_blue = temp_path_cost
+        # starting edges meet at (0, 0)
+        # ending edges meet at (board_size - 1, board_size - 1)
+        START_IND, END_IND = 0, self.board_size - 1
         
-        # if starting at start edge have init start node (0, 0)
-        # if starting at end edge have init start node (0, board_size - 1)
-        r = 0 if starting_edge_red == BoardEdge.RED_START else board_size - 1
-        goal_edge = BoardEdge.RED_END if starting_edge_red == BoardEdge.RED_START else BoardEdge.RED_START
-        min_win_dist_red = board_size * 2
-        for q in range(board_size):
-            if state[r][q] == util.constants.BLUE: pass
-            temp_path_cost = search_path(state, util.constants.RED, board_size, (r, q), goal_edge, Mode.WIN_DIST)
-            if temp_path_cost and temp_path_cost < min_win_dist_red:
-                min_win_dist_red = temp_path_cost
+        for colour in (util.constants.RED, util.constants.BLUE):
+                
+            # set r and q to 0
+            r, q = 0, 0
 
-        #print(min_win_dist_blue)
-        #print(min_win_dist_red)
+            # dict to support iterating over r or q axes depending on colour
+            axes = {util.constants.RED: r, util.constants.BLUE: q}
+
+            # iterative over the starting and ending edge for each colour
+
+            for axes[colour] in (START_IND, END_IND):
+                edge_tile_freqs[axes[colour]] = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
+                for axes[opposite_colour(colour)] in range(self.board_size):
+                    edge_tile_freqs[axes[colour]][state[r][q]] += 1
+
+            # return the edge with the fewest red tiles, if a tie occurs
+            # return the edge with the most rbluetiles
+            if edge_tile_freqs[START_IND][util.constants.RED] > edge_tile_freqs[END_IND][util.constants.RED]:
+                starting_edge_blue = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+            elif edge_tile_freqs[END_IND][util.constants.RED] - edge_tile_freqs[START_IND][util.constants.RED]:
+                starting_edge_blue = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+            else:
+                if edge_tile_freqs[START_IND][util.constants.BLUE] > edge_tile_freqs[END_IND][util.constants.BLUE]:
+                    starting_edge_blue = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+                else:
+                    starting_edge_blue = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+
+            # if starting at start edge have init start node (0, 0)
+            # if starting at end edge have init start node (0, board_size - 1)
+            axes[colour] = START_IND if starting_edge_blue == BoardEdge.BLUE_START else END_IND
+            goal_edge = BoardEdge.BLUE_END if starting_edge_blue == BoardEdge.BLUE_START else BoardEdge.BLUE_START
+            win_dists[colour] = self.board_size * 2
+            for axes[opposite_colour(colour)] in range(self.board_size):
+                if state[r][q] == opposite_colour(colour): 
+                    continue
+                temp_path_cost = search_path(state, colour, self.board_size, (r, q), goal_edge, Mode.WIN_DIST)
+                if temp_path_cost and temp_path_cost < win_dists[colour]:
+                    win_dists[colour] = temp_path_cost
+
         # return win distance difference value such that higher is better for our colour
-        win_dist_diff = min_win_dist_red - min_win_dist_blue
-        return win_dist_diff if player_colour == util.constants.BLUE else -win_dist_diff
+        win_dist_diff = win_dists[opposite_colour(colour)] - win_dists[colour]
+        return win_dist_diff if self.player_colour == colour else -win_dist_diff
 
     def tile_difference(self, state):
         """

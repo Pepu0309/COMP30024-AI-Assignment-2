@@ -1,7 +1,12 @@
 {
     "n": 8,
     "board": [
-        ["blue", 3, 3]
+        ["blue", 3, 3],
+        ["red", 4, 3],
+        ["red", 4, 4],
+        ["red", 3, 4],
+        ["red", 2, 4],
+        ["red", 4, 2]
     ],
     "start": [3, 0],
     "goal_edge": "blue_end",
