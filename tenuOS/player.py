@@ -93,7 +93,7 @@ class Player:
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
         self.my_last_move = move
-        #print(move)
+
         return move
     
     def turn(self, player, action):
@@ -109,16 +109,18 @@ class Player:
         """
         # put your code here
         
-        
-        #print(self.opponent_last_move)
+        # store player colour using our own defined constants
         if player == "red":
             player_colour = util.constants.RED
         elif player == "blue":
             player_colour = util.constants.BLUE
 
+        # store axial coords of the action if the action was to place
         if action[0] == "PLACE":
             r = action[1]
             q = action[2]
+        # if the action was steal, retrieve coords of reflected tile from
+        # knowledge of first played move
         elif action[0] == "STEAL":
             if player_colour == self.player_colour:
                 q = self.opponent_last_move[1]
@@ -126,23 +128,29 @@ class Player:
             else:
                 q = self.my_last_move[1]
                 r = self.my_last_move[2]
+            # remove the tile placed by the player whose move was stolen
             self.board_state[q][r] = util.constants.EMPTY
+            # store the coords where the reflected tile will be placed
             self.steal_coords = (r, q)
 
+        # place the played move in board state variable
         self.board_state[r][q] = player_colour
-        #print(self.board_state)
 
+        # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
             self.my_last_move = action
         else:
             self.opponent_last_move = action
 
-        # print("state at end of turn()")
-        # print_state(self.board_state)
-
+        # update counter of moves played
         self.current_turn += 1
 
     def cutoff_test(self, state, depth):
+        """
+        Test a hypothetical state at a given depth and determine if either
+        the terminal state has been reached or the depth limit has been reached.
+        """
+        
         # cutoff_depth or terminal_state
         if depth == 4:
             return True
@@ -150,14 +158,16 @@ class Player:
         return False
 
     def eval_func(self, state):
+        """
+        Evaluates a state, with a higher number meaning more payoff for our player.
+        """
 
-        # print("state at start of eval()")
-        # print_state(state)
-
+        # calculate all features
         win_dist_diff = self.win_distance_difference(state, self.board_size, self.player_colour)
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
+        # sum features according to weights
         evaluation = 0.4 * win_dist_diff + 0.5 * tile_difference + 0.1 * two_bridge_count_diff
 
         return evaluation
@@ -239,12 +249,20 @@ class Player:
         # return win distance difference value such that higher is better for our colour
         win_dist_diff = min_win_dist_red - min_win_dist_blue
         return win_dist_diff if player_colour == util.constants.BLUE else -win_dist_diff
-        # this is like 
-        # player_colour == BLUE ? min_win_dist_red - min_win_dist_blue : min_win_dist_blue - min_win_dist_red
 
     def tile_difference(self, state):
+        """
+        Takes a state and returns the difference in the number of tiles that exist on the
+        board placed by our player and our opponent. 
+        
+        A larger value means more of our colour tiles than the opponents colour.
+        """
+
         player_tile_count = 0
         opponent_tile_count = 0
+
+        # loop through all tiles on the board and record the number of tiles
+        # which exist on the board placed by our own player and the opponent
         for r in range(self.board_size):
             for q in range(self.board_size):
                 if state[r][q] == self.player_colour:
@@ -252,14 +270,19 @@ class Player:
                 elif state[r][q] == (self.player_colour + 1) % 2:
                     opponent_tile_count += 1
 
+        # calculate the difference, with a large value meaning our player
+        # has more tiles on the board
         tile_difference = player_tile_count - opponent_tile_count
         return tile_difference
 
     def two_bridge_count_diff(self, state):
+        """
+        to be documented
+        """
+
         player_two_bridge_count = 0
         opponent_two_bridge_count = 0
 
-        #print(state)
         for r in range(self.board_size):
             for q in range(self.board_size):
                 if state[r][q] != util.constants.EMPTY:
@@ -270,100 +293,121 @@ class Player:
                     elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
                         opponent_two_bridge_count += two_bridge_check("count", state, r, q,
                                                                     self.board_size, cur_cell_occupied_colour)
-        #print(player_two_bridge_count)
-        #print(opponent_two_bridge_count)
+
         return player_two_bridge_count - opponent_two_bridge_count
 
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
     # player_colour
-    def max_value(self, successed_state, board_size, alpha, beta, depth, player_colour):
-        if self.cutoff_test(successed_state.state, depth):
-            return self.eval_func(successed_state.state)
+    def max_value(self, input_state, board_size, alpha, beta, depth, player_colour):
+        """
+        Max value function is called on states resulting from a move of the opponent's colour,
+        calls mix value function on states resulting from candidate moves by our player.
+        """
 
-        #print("state at start of max_value()")
-        #print_state(state)
+        if self.cutoff_test(input_state.state, depth):
+            return self.eval_func(input_state.state)
 
-        successor_states = self.get_successor_states(successed_state.state, board_size, player_colour, successed_state.move, successed_state.prev_move)
+        successor_states = self.get_successor_states(input_state.state, board_size, player_colour, input_state.move, input_state.prev_move)
         for successor_state in successor_states:
-            alpha = max(alpha, self.min_value(successor_state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
+            alpha = max(alpha, self.min_value(successor_state, board_size, alpha, beta, depth + 1, (player_colour + 1) % 2))
             if alpha >= beta:
                 return beta
 
         return alpha
 
-    def min_value(self, successed_state, board_size, alpha, beta, depth, player_colour):
-        if self.cutoff_test(successed_state.state, depth):
-            return self.eval_func(successed_state.state)
+    def min_value(self, input_state, board_size, alpha, beta, depth, player_colour):
+        """
+        Min value function is called on states resulting from a move of our own colour,
+        calls max value function on states resulting from candidate moves by the opponent.
+        """
 
-        #print("state at start of min_value()")
-        #print_state(state)
+        if self.cutoff_test(input_state.state, depth):
+            return self.eval_func(input_state.state)
 
-        successor_states = self.get_successor_states(successed_state.state, board_size, player_colour, successed_state.move, successed_state.prev_move)
+        successor_states = self.get_successor_states(input_state.state, board_size, player_colour, input_state.move, input_state.prev_move)
         for successor_state in successor_states:
-            #if depth == 2:
-            #    print_state(successor_state.state)
-            beta = min(beta, self.max_value(successor_state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
+            beta = min(beta, self.max_value(successor_state, board_size, alpha, beta, depth + 1, (player_colour + 1) % 2))
             if beta <= alpha:
                 return alpha
 
         return beta
 
     def get_successor_states(self, state, board_size, player_colour, last_move, prior_move):
-        
-        # Create successor for the moves using the player colour
-        successor_states = []
-        checked = {}
-
-        for r in range(board_size):
-            for q in range(board_size):
-                checked[(r, q)] = False
-
         """
+        Takes a state as input, the player colour of whose turn it is in the given state,
+        and returns a list of possible 'successor states' resulting from different moves
+        that could be played. 
+        
+        Generates successor states in rings about the tiles placed
+        in the most recent two moves to optimise the order in which alpha-beta considers
+        moves at depth 0, as the best move is likely to be near these tiles.
+        """
+
+        # list for successor states, dict to store which states have already been added
+        successor_states = []
+        added = {}
+
+        # initialise dictionary to false for all tiles
         for r in range(board_size):
             for q in range(board_size):
-                if state[r][q] == util.constants.EMPTY:
-                    new_successor_state = SuccessorState(state, r, q, player_colour, board_size)
-                    successor_states.append(new_successor_state)
-        """       
-
-        next = {util.constants._30_DEG:  (-1,  1),
+                added[(r, q)] = False
+   
+        # dictionary constant used to iterate in spiral/circles about a central tile
+        NEXT = {util.constants._30_DEG:  (-1,  1),
                 util.constants._90_DEG:  (-1,  0),
                 util.constants._150_DEG: (0 , -1),
                 util.constants._210_DEG: (1 , -1),
                 util.constants._270_DEG: (1 ,  0),
                 util.constants._330_DEG: (0 ,  1)}
+        LAYERS = 2 # num layers to explore about a tile
 
+        # repeat state generation about most recent move for both players
         for move in (last_move, prior_move):
 
+            # arbitrary start at 30 degrees north 
             angle = util.constants._30_DEG
+            # this equates to +1 in the r axis
             r, q = move[0] + 1, move[1]
-            corners = 0
-
-            for layer in range(2):
-                for i in range(6):
+            
+            # search all tiles LAYERS about tile placed by move
+            for layer in range(LAYERS):
+                # repeat for each side of the layer (6 times as hexagons)
+                for i in range(len(NEXT)):
+                    # the number of cells on each edge == the layer
                     for j in range(layer):
-                        if is_valid_cell(r, q, board_size) and (not checked[(r, q)]) and state[r][q] == util.constants.EMPTY:
-                            checked[(r, q)] = True
+                        # if tile is valid (within the board dimensions), not yet had its successor state added,
+                        # and is currently empty, generate successor state and add to list
+                        if is_valid_cell(r, q, board_size) and (not added[(r, q)]) and state[r][q] == util.constants.EMPTY:
+                            # update added dict
+                            added[(r, q)] = True
                             successor_states.append(SuccessorState(state, (r, q), last_move, player_colour, board_size))
-                        r += next[angle][0]
-                        q += next[angle][1]
-                    angle = (angle + 1) % 6
+                        # adjust r and q according the current angle 
+                        r += NEXT[angle][0]
+                        q += NEXT[angle][1]
+                    # move to next edge
+                    angle = (angle + 1) % len(NEXT)
 
-        # print_state(state)
         return successor_states
 
 class SuccessorState:
 
     def __init__(self, state, move, prev_move, player_colour, board_size):
+
+        # generate copy of the state
         self.state = np.copy(state)
+        # store the move being considered
         self.move = move
+        # store the most recent move in the state parameter
         self.prev_move = prev_move
+        # store the player colour who is playing the move being considered
         self.player_colour = player_colour
         self.board_size = board_size
 
+        # apply the considered move to state instance variable
         self.apply_move()
 
     def apply_move(self):
+
         # Change the cell to player's colour
         self.state[self.move[0]][self.move[1]] = self.player_colour
 
@@ -453,6 +497,8 @@ cells_to_remove: Optional parameter; used with "capture". A list of the moves to
                  calling function and returned to them.
 """
 def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remove = None):
+
+
     # If we're trying to check for and apply captures in a 2-bridge, then we're checking for opponent_colour
     # in the 2 adjacent cells in between the 2-bridge. If we're trying to count the number of 2 bridges, then we want
     # the 2 adjacent cells in between the 2-bridge to be empty.
