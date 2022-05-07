@@ -24,12 +24,6 @@ class Player:
             self.player_colour = util.constants.BLUE
 
         self.board_size = n
-        # self.board_state = []
-        # for r in range(self.board_size):
-        #     board_row = []
-        #     self.board_state.append(board_row)
-        #     for q in range(self.board_size):
-        #         board_row.append(util.constants.EMPTY)
         self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
         self.current_turn = 0
         self.my_last_move = None
@@ -47,26 +41,29 @@ class Player:
         move = None
 
         # -------------------------------------------Opening Playbook--------------------------------------------------
-        if self.current_turn == 0:
-            move = ("PLACE", 1, 1)
-        elif self.current_turn == 1:
-            r = self.opponent_last_move[1]
-            q = self.opponent_last_move[2]
-
-            largest_board_index = self.board_size - 1
-
+        if self.current_turn <= 1:
             if self.board_size % 4 <= 2:
                 divider = self.board_size // 4
             else:
                 divider = self.board_size // 4 + 1
 
-            if is_connected_diagonal(r, q, self.board_size) and (abs(r-q) <= (self.board_size - divider)):
-                move = ("STEAL", )
-            elif divider <= r <= (largest_board_index - divider) and \
-                    divider <= q <= (largest_board_index - divider):
-                move = ("STEAL",)
-            else:
-                move = ("PLACE", self.board_size // 2, self.board_size // 2)
+            largest_board_index = self.board_size - 1
+
+            if self.current_turn == 0:
+                # Place on the tile that's on the strong diagonal on the bottom right distance 1 outside the
+                # parallelogram we established would be good to steal from.
+                move = ("PLACE", divider - 1, largest_board_index - divider - 1)
+            elif self.current_turn == 1:
+                r = self.opponent_last_move[1]
+                q = self.opponent_last_move[2]
+
+                if is_connected_diagonal(r, q, self.board_size) and (abs(r-q) <= (self.board_size - divider)):
+                    move = ("STEAL", )
+                elif divider <= r <= (largest_board_index - divider) and \
+                        divider <= q <= (largest_board_index - divider):
+                    move = ("STEAL",)
+                else:
+                    move = ("PLACE", self.board_size // 2, self.board_size // 2)
         else:
             best_move = None
             for successor_state in self.get_successor_states(self.board_state, self.board_size, self.player_colour):
@@ -79,8 +76,6 @@ class Player:
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
-
-
 
             move = ("PLACE", best_move.move_r, best_move.move_q)
 
@@ -117,7 +112,8 @@ class Player:
                 r = self.my_last_move[2]
             self.board_state[q][r] = util.constants.EMPTY
 
-        self.board_state[r][q] = player_colour
+        self.board_state = SuccessorState(self.board_state, r, q, player_colour, self.board_size).state
+        print(self.board_state)
 
         if player_colour == self.player_colour:
             self.my_last_move = action
@@ -228,8 +224,7 @@ class Player:
         win_dist_diff = win_distance_difference(state, self.board_size, self.player_colour)
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
-        evaluation = 0.3 * win_dist_diff + 0.5 * tile_difference + 0.2 * two_bridge_count_diff
-        print(state)
+        evaluation = 0.3 * win_dist_diff + 0.9 * tile_difference + -0.2 * two_bridge_count_diff
         return evaluation
 
     def tile_difference(self, state):
