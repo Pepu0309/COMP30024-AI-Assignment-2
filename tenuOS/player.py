@@ -28,7 +28,6 @@ class Player:
         self.current_turn = 0
         self.my_last_move = None
         self.opponent_last_move = None
-        self.tranposition_table = {}
 
     def action(self):
         """
@@ -78,6 +77,9 @@ class Player:
                 cur_move_value = self.min_value(successor_state.state, self.board_size, alpha, beta, 1, (self.player_colour + 1) %2)
                 gc.collect()
 
+                if cur_move_value is None:
+                    continue
+
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
@@ -86,7 +88,9 @@ class Player:
 
         self.my_last_move = move
         # Explicitly type casting as suggested by Alexander Zable in Ed Thread #118
-        move = (str(move[0]), int(move[1]), int(move[2]))
+        if move[0] == "PLACE":
+            move = (str(move[0]), int(move[1]), int(move[2]))
+
         return move
     
     def turn(self, player, action):
@@ -267,17 +271,30 @@ class Player:
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
     # player_colour
     def max_value(self, state, board_size, alpha, beta, depth, player_colour):
+        # At depth 2, both the player and the opponent has made a move. If these sequence of moves result in a capture
+        # then immediately prune the subtree and ignore this move. Depth == 2 only occurs on max_value since min_value
+        # is called on odd depths and max_value is called on even depths.
+        if depth == 2:
+            if self.tile_difference(state) < 0:
+                return None
+
         if self.cutoff_test(state, depth):
             return self.eval_func(state)
 
         successor_states = self.get_successor_states(state, board_size, player_colour)
         for successor_state in successor_states:
-            alpha = max(alpha, self.min_value(successor_state.state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
+            curr_succ_state_min_val = self.min_value(successor_state.state, board_size, alpha, beta, depth + 1,
+                                                     (player_colour + 1) % 2)
+            # If None was returned from min_value, then this subtree has been determined to be pruned. Hence, propagate
+            # None up the search tree. In the case of a depth = 2 pruning, max_value doesn't need to check for this but
+            # this is added just to make the code more extensible in case other lower depth pruning is added.
+            if curr_succ_state_min_val is None:
+                return None
+            alpha = max(alpha, curr_succ_state_min_val)
             if alpha >= beta:
                 return beta
 
         return alpha
-
 
     def min_value(self, state, board_size, alpha, beta, depth, player_colour):
         if self.cutoff_test(state, depth):
@@ -285,7 +302,13 @@ class Player:
 
         successor_states = self.get_successor_states(state, board_size, player_colour)
         for successor_state in successor_states:
-            beta = min(beta, self.max_value(successor_state.state, board_size, alpha, beta, depth+1, (player_colour + 1) % 2))
+            curr_succ_state_max_val = self.max_value(successor_state.state, board_size, alpha, beta, depth + 1,
+                                                     (player_colour + 1) % 2)
+            # If None was returned from max_value, then this subtree has been determined to be pruned. Hence, propagate
+            # None up the search tree.
+            if curr_succ_state_max_val is None:
+                return None
+            beta = min(beta, curr_succ_state_max_val)
             if beta <= alpha:
                 return alpha
 
