@@ -1,3 +1,4 @@
+from asyncio import constants
 from cmath import inf
 from util.enums import *
 from dijkstra.pathfinding import search_path
@@ -160,10 +161,6 @@ class Player:
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
         # sum features according to weights
-        if win_dist_diff != 0:
-            print_state(state)
-            print(win_dist_diff)
-            print(tile_difference)
         evaluation = 0.3 * win_dist_diff + 0.9 * tile_difference + -0.2 * two_bridge_count_diff
 
         return evaluation
@@ -177,57 +174,56 @@ class Player:
         # ending edges meet at (board_size - 1, board_size - 1)
         START_IND, END_IND = 0, self.board_size - 1
         
+        # iterate over both colours, to calculate win distance for both
         for colour in (util.constants.RED, util.constants.BLUE):
                 
-            # set r and q to 0
-            r, q = 0, 0
+            # using lists as wrappers to allow r and q to be modified by 
+            # assignment from dictionaries with r and q as values
+            r, q = [0], [0]
 
             # dict to support iterating over r or q axes depending on colour
             axes = {util.constants.RED: r, util.constants.BLUE: q}
 
-            # iterative over the starting and ending edge for each colour
+            # iterate over both the starting and ending edge for current colour
+            # retrieving the 0th index to 'unwrap' and modify the index stored
+            # in r or q        
+            for axes[colour][0] in (START_IND, END_IND):
+                # store a dict of tile colour frequencies for both edges
+                edge_tile_freqs[axes[colour][0]] = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
+                # iterate over all tiles on the edge and store frequencies
+                # of each colour
+                for axes[opposite_colour(colour)][0] in range(self.board_size):
+                    edge_tile_freqs[axes[colour][0]][state[r[0]][q[0]]] += 1
 
-            for axes[colour] in (START_IND, END_IND):
-                edge_tile_freqs[axes[colour]] = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
-                for axes[opposite_colour(colour)] in range(self.board_size):
-                    edge_tile_freqs[axes[colour]][state[r][q]] += 1
-
-            # return the edge with the fewest red tiles, if a tie occurs
-            # return the edge with the most rbluetiles
-            if edge_tile_freqs[START_IND][opposite_colour(colour)] > edge_tile_freqs[END_IND][opposite_colour(colour)]:
-                starting_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
-            elif edge_tile_freqs[END_IND][opposite_colour(colour)] - edge_tile_freqs[START_IND][opposite_colour(colour)]:
-                starting_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+            # set the starting edge to the edge with the fewest opposite coloured tiles to minimise dijkstra calls
+            if edge_tile_freqs[START_IND][opposite_colour(colour)] < edge_tile_freqs[END_IND][opposite_colour(colour)]:
+                start_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
+                goal_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END        
             else:
-                if edge_tile_freqs[START_IND][colour] > edge_tile_freqs[END_IND][colour]:
-                    starting_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
-                else:
-                    starting_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+                start_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
+                goal_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START   
 
             # if starting at start edge have init start node (0, 0)
             # if starting at end edge have init start node (0, board_size - 1)
-            axes[colour] = START_IND if starting_edge == (BoardEdge.BLUE_START if colour == BLUE else BoardEdge.RED_START) else END_IND
-
-            if starting_edge == BoardEdge.BLUE_START:
-                goal_edge = BoardEdge.BLUE_END
-            elif starting_edge == BoardEdge.BLUE_END:
-                goal_edge = BoardEdge.BLUE_START
-            elif starting_edge == BoardEdge.RED_START:
-                goal_edge = BoardEdge.RED_END
-            elif starting_edge == BoardEdge.RED_END:
-                goal_edge = BoardEdge.RED_START
-
-            #goal_edge = BoardEdge.BLUE_END if starting_edge == BoardEdge.BLUE_START else BoardEdge.BLUE_START
+            axes[colour][0] = START_IND if start_edge == (BoardEdge.BLUE_START if colour == BLUE else BoardEdge.RED_START) else END_IND
             temp_path_cost = None
+            # set win distance to an upperbound, if no path is found for one colour
+            # that implies the other colour has won, will have already been captured
+            # by terminal state checking
             win_dists[colour] = self.board_size * 2
-            for axes[opposite_colour(colour)] in range(self.board_size):
-                if state[r][q] == opposite_colour(colour): 
+            # iterate over starting edge
+            for axes[opposite_colour(colour)][0] in range(self.board_size):
+                # skip any tiles of opposite colour
+                if state[r[0]][q[0]] == opposite_colour(colour): 
                     continue
-                temp_path_cost = search_path(state, colour, self.board_size, (r, q), goal_edge, Mode.WIN_DIST)
+                # call dijkstra and find the min path cost from that tile to the goal edge
+                temp_path_cost = search_path(state, colour, self.board_size, (r[0], q[0]), goal_edge, Mode.WIN_DIST)
                 # if no path is found do not update win_distance
+                # if a path is found and is smaller than the current min win distance
+                # update win distance to new minimum
                 if temp_path_cost and temp_path_cost < win_dists[colour]:
                     win_dists[colour] = temp_path_cost
-
+            
         # return win distance difference value such that higher is better for our colour
         win_dist_diff = win_dists[opposite_colour(colour)] - win_dists[colour]
         return win_dist_diff if self.player_colour == colour else -win_dist_diff
