@@ -28,6 +28,7 @@ class Player:
         self.current_turn = 0
         self.my_last_move = None
         self.opponent_last_move = None
+        self.tranposition_table = {}
 
     def action(self):
         """
@@ -50,9 +51,13 @@ class Player:
             largest_board_index = self.board_size - 1
 
             if self.current_turn == 0:
+                # On board size 3, the strong diagonals are just 1 away from the middle and are too strong.
+                if self.board_size == 3:
+                    move = ("PLACE", 1, 2)
                 # Place on the tile that's on the strong diagonal on the bottom right distance 1 outside the
                 # parallelogram we established would be good to steal from.
-                move = ("PLACE", divider - 1, largest_board_index - divider - 1)
+                elif self.board_size >= 4:
+                    move = ("PLACE", divider - 1, largest_board_index - divider + 1)
             elif self.current_turn == 1:
                 r = self.opponent_last_move[1]
                 q = self.opponent_last_move[2]
@@ -80,7 +85,8 @@ class Player:
             move = ("PLACE", best_move.move_r, best_move.move_q)
 
         self.my_last_move = move
-        # print(move)
+        # Explicitly type casting as suggested by Alexander Zable in Ed Thread #118
+        move = (str(move[0]), int(move[1]), int(move[2]))
         return move
     
     def turn(self, player, action):
@@ -113,7 +119,6 @@ class Player:
             self.board_state[q][r] = util.constants.EMPTY
 
         self.board_state = SuccessorState(self.board_state, r, q, player_colour, self.board_size).state
-        print(self.board_state)
 
         if player_colour == self.player_colour:
             self.my_last_move = action
@@ -221,10 +226,12 @@ class Player:
             win_dist_diff = min_win_dist_red - min_win_dist_blue
             return win_dist_diff if player_colour == util.constants.BLUE else -win_dist_diff
 
+
         win_dist_diff = win_distance_difference(state, self.board_size, self.player_colour)
         tile_difference = self.tile_difference(state)
         two_bridge_count_diff = self.two_bridge_count_diff(state)
         evaluation = 0.3 * win_dist_diff + 0.9 * tile_difference + -0.2 * two_bridge_count_diff
+
         return evaluation
 
     def tile_difference(self, state):
