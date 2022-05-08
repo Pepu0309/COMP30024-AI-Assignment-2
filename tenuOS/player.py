@@ -166,6 +166,13 @@ class Player:
         return evaluation
 
     def win_distance_difference(self, state):
+        """
+        Takes a state as input and calculates the 'win distance' for each colour,
+        returns the win distance of the opponent colour minus the win distance of
+        the self colour. Win distance is defined as the minimum number
+        of empty tiles a colour needs to occupy to create a continuous path
+        between both its edges, i.e. to win.
+        """
 
         win_dists = {}
         edge_tile_freqs = {}
