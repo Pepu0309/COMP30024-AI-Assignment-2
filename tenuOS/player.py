@@ -25,12 +25,6 @@ class Player:
             self.player_colour = util.constants.BLUE
 
         self.board_size = n
-        # self.board_state = []
-        # for r in range(self.board_size):
-        #     board_row = []
-        #     self.board_state.append(board_row)
-        #     for q in range(self.board_size):
-        #         board_row.append(util.constants.EMPTY)
         self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
         self.current_turn = 0
         self.my_last_move = None
@@ -49,26 +43,33 @@ class Player:
         move = None
 
         # -------------------------------------------Opening Playbook--------------------------------------------------
-        if self.current_turn == 0:
-            move = ("PLACE", 1, 1)
-        elif self.current_turn == 1:
-            r = self.opponent_last_move[1]
-            q = self.opponent_last_move[2]
-
-            largest_board_index = self.board_size - 1
-
+        if self.current_turn <= 1:
             if self.board_size % 4 <= 2:
                 divider = self.board_size // 4
             else:
                 divider = self.board_size // 4 + 1
 
-            if is_connected_diagonal(r, q, self.board_size) and (abs(r-q) <= (self.board_size - divider)):
-                move = ("STEAL", )
-            elif divider <= r <= (largest_board_index - divider) and \
-                    divider <= q <= (largest_board_index - divider):
-                move = ("STEAL",)
-            else:
-                move = ("PLACE", self.board_size // 2, self.board_size // 2)
+            largest_board_index = self.board_size - 1
+
+            if self.current_turn == 0:
+                # On board size 3, the strong diagonals are just 1 away from the middle and are too strong.
+                if self.board_size == 3:
+                    move = ("PLACE", 1, 2)
+                # Place on the tile that's on the strong diagonal on the bottom right distance 1 outside the
+                # parallelogram we established would be good to steal from.
+                elif self.board_size >= 4:
+                    move = ("PLACE", divider - 1, largest_board_index - divider + 1)
+            elif self.current_turn == 1:
+                r = self.opponent_last_move[1]
+                q = self.opponent_last_move[2]
+
+                if is_connected_diagonal(r, q, self.board_size) and (abs(r-q) <= (self.board_size - divider)):
+                    move = ("STEAL", )
+                elif divider <= r <= (largest_board_index - divider) and \
+                        divider <= q <= (largest_board_index - divider):
+                    move = ("STEAL",)
+                else:
+                    move = ("PLACE", self.board_size // 2, self.board_size // 2)
         else:
             best_move = None
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
@@ -77,16 +78,25 @@ class Player:
                 # For each move their, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
                 # the potential moves available to us in this current turn.
+
                 cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
+
                 gc.collect()
+
+                if cur_move_value is None:
+                    continue
 
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
 
+
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
         self.my_last_move = move
+        # Explicitly type casting as suggested by Alexander Zable in Ed Thread #118
+        if move[0] == "PLACE":
+            move = (str(move[0]), int(move[1]), int(move[2]))
 
         return move
     
@@ -126,8 +136,7 @@ class Player:
             # store the coords where the reflected tile will be placed
             self.steal_coords = (r, q)
 
-        # place the played move in board state variable
-        self.board_state[r][q] = player_colour
+        self.board_state = SuccessorState(self.board_state, player_colour, self.board_size, (r, q)).state
 
         # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
@@ -283,18 +292,30 @@ class Player:
 
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
     # player_colour
+
     def max_value(self, input_state, board_size, alpha, beta, depth, player_colour):
         """
         Max value function is called on states resulting from a move of the opponent's colour,
         calls mix value function on states resulting from candidate moves by our player.
         """
+        if depth == 2:
+            if self.tile_difference(input_state.state) < 0:
+                return None
 
         if self.cutoff_test(input_state.state, depth):
             return self.eval_func(input_state.state)
 
         successor_states = self.get_successor_states(input_state.state, board_size, player_colour, input_state.move, input_state.prev_move)
         for successor_state in successor_states:
-            alpha = max(alpha, self.min_value(successor_state, board_size, alpha, beta, depth + 1, (player_colour + 1) % 2))
+            curr_succ_state_min_val = self.min_value(successor_state, board_size, alpha, beta, depth + 1,
+                                                    (player_colour + 1) % 2)
+            # If None was returned from min_value, then this subtree has been determined to be pruned. Hence, propagate
+            # None up the search tree. In the case of a depth = 2 pruning, max_value doesn't need to check for this but
+            # this is added just to make the code more extensible in case other lower depth pruning is added.
+            if curr_succ_state_min_val is None:
+                return None
+            alpha = max(alpha, curr_succ_state_min_val)
+
             if alpha >= beta:
                 return beta
 
@@ -311,7 +332,14 @@ class Player:
 
         successor_states = self.get_successor_states(input_state.state, board_size, player_colour, input_state.move, input_state.prev_move)
         for successor_state in successor_states:
-            beta = min(beta, self.max_value(successor_state, board_size, alpha, beta, depth + 1, (player_colour + 1) % 2))
+            curr_succ_state_max_val = self.max_value(successor_state, board_size, alpha, beta, depth + 1,
+                                                    (player_colour + 1) % 2)
+            # If None was returned from max_value, then this subtree has been determined to be pruned. Hence, propagate
+            # None up the search tree.
+            if curr_succ_state_max_val is None:
+                return None
+            beta = min(beta, curr_succ_state_max_val)
+
             if beta <= alpha:
                 return alpha
 
@@ -365,7 +393,7 @@ class Player:
                         if is_valid_cell(r, q, board_size) and (not added[(r, q)]) and state[r][q] == util.constants.EMPTY:
                             # update added dict
                             added[(r, q)] = True
-                            successor_states.append(SuccessorState(state, (r, q), last_move, player_colour, board_size))
+                            successor_states.append(SuccessorState(state, player_colour, board_size, (r, q), last_move))
                         # adjust r and q according the current angle 
                         r += NEXT[angle][0]
                         q += NEXT[angle][1]
@@ -376,7 +404,7 @@ class Player:
 
 class SuccessorState:
 
-    def __init__(self, state, move, prev_move, player_colour, board_size):
+    def __init__(self, state, player_colour, board_size, move, prev_move=None):
 
         # generate copy of the state
         self.state = np.copy(state)
