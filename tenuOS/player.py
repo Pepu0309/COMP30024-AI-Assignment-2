@@ -6,6 +6,7 @@ from util.general import *
 import util.constants
 import numpy as np
 import gc
+import time
 
 class Player:
 
@@ -18,6 +19,7 @@ class Player:
         play as Red, or the string "blue" if your player will play
         as Blue.
         """
+        init_start_time = time.process_time()
 
         if player == "red":
             self.player_colour = util.constants.RED
@@ -26,17 +28,27 @@ class Player:
 
         self.board_size = n
         self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
+
+        self.time_limit = n ** 2
+        self.time_elapsed = 0
+
+        self.depth_limit = 2
+        self.empty_tile_count = n ** 2
+        self.branching_factor = 0
+
         self.current_turn = 0
         self.my_last_move = None
         self.opponent_last_move = None
         self.steal_coords = None
+
+        self.time_elapsed += time.process_time() - init_start_time
 
     def action(self):
         """
         Called at the beginning of your turn. Based on the current state
         of the game, select an action to play.
         """
-
+        action_start_time = time.process_time()
         alpha = -(float('inf'))
         beta = float('inf')
 
@@ -74,12 +86,18 @@ class Player:
             best_move = None
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
-            for successor_state in self.get_successor_states(self.board_state, self.board_size, self.player_colour, opponent_last, my_last):
+
+            successor_states = self.get_successor_states(self.board_state, self.board_size, self.player_colour, opponent_last, my_last)
+            self.branching_factor = len(successor_states)
+            for successor_state in successor_states:
                 # For each move their, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
                 # the potential moves available to us in this current turn.
 
-                cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
+                if self.time_elapsed >= 0.1 * self.time_limit:
+                    cur_move_value = self.eval_func(successor_state.state)
+                else:
+                    cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
 
                 gc.collect()
 
@@ -98,6 +116,7 @@ class Player:
         if move[0] == "PLACE":
             move = (str(move[0]), int(move[1]), int(move[2]))
 
+        self.time_elapsed += time.process_time() - action_start_time
         return move
     
     def turn(self, player, action):
@@ -111,7 +130,7 @@ class Player:
         the same as what your player returned from the action method
         above. However, the referee has validated it at this point.
         """
-        
+        turn_start_time = time.process_time()
         # store player colour using our own defined constants
         if player == "red":
             player_colour = util.constants.RED
@@ -146,15 +165,21 @@ class Player:
 
         # update counter of moves played
         self.current_turn += 1
+        self.time_elapsed += time.process_time() - turn_start_time
+        print(self.time_elapsed)
 
     def cutoff_test(self, state, depth):
         """
         Test a hypothetical state at a given depth and determine if either
         the terminal state has been reached or the depth limit has been reached.
         """
+        if self.branching_factor <= 10:
+            self.depth_limit = 4
+        else:
+            self.depth_limit = 2
 
         # cutoff_depth or terminal_state
-        if depth == 4:
+        if depth == self.depth_limit:
             return True
 
         return False
