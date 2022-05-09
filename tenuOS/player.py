@@ -372,7 +372,9 @@ class Player:
                 util.constants._210_DEG: (1 , -1),
                 util.constants._270_DEG: (1 ,  0),
                 util.constants._330_DEG: (0 ,  1)}
-        LAYERS = 2 # num layers to explore about a tile
+        MIN_LAYERS = 2 # num layers to explore about a tile
+        MAX_LAYERS = 4
+        MIN_SUCCESSOR_STATES = 12
 
         # repeat state generation about most recent move for both players
         for move in (last_move, prior_move):
@@ -383,7 +385,11 @@ class Player:
             r, q = move[0] + 1, move[1]
             
             # search all tiles LAYERS about tile placed by move
-            for layer in range(LAYERS):
+            for layer in range(MAX_LAYERS):
+                # if after MIN_LAYERS layers, at least MIN_SUCCESSOR_STATES successor states
+                # have been found, break
+                if layer >= MIN_LAYERS and len(successor_states) >= MIN_SUCCESSOR_STATES:
+                    break
                 # repeat for each side of the layer (6 times as hexagons)
                 for i in range(len(NEXT)):
                     # the number of cells on each edge == the layer
@@ -399,6 +405,15 @@ class Player:
                         q += NEXT[angle][1]
                     # move to next edge
                     angle = (angle + 1) % len(NEXT)
+            
+            # if after MAX_LAYERS layers have been checked, less than MIN_SUCCESSOR_STATES
+            # successor states have been found, do a full board scan and add states until
+            # all states added or MIN_SUCCESSOR_STATES have been found total
+            if len(successor_states) < MIN_SUCCESSOR_STATES:
+                for r in range(board_size):
+                    for q in range(board_size):
+                        if len(successor_states) < MIN_SUCCESSOR_STATES and (not added[(r, q)]) and state[r][q] == util.constants.EMPTY:
+                            successor_states.append(SuccessorState(state, player_colour, board_size, (r, q), last_move))
 
         return successor_states
 
