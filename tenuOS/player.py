@@ -29,9 +29,11 @@ class Player:
         self.board_size = n
         self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
 
+        # Used for reverting to basic strategy in case nearing time limit
         self.time_limit = n ** 2
         self.time_elapsed = 0
 
+        # Used for dynamic depth
         self.depth_limit = 2
         self.empty_tile_count = n ** 2
         self.branching_factor = 0
@@ -41,6 +43,9 @@ class Player:
         self.my_last_move = None
         self.opponent_last_move = None
         self.steal_coords = None
+
+        # Used for forward pruning
+        self.tile_difference_threshold = 0
 
         self.time_elapsed += time.process_time() - init_start_time
 
@@ -94,7 +99,6 @@ class Player:
                 # For each move their, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
                 # the potential moves available to us in this current turn.
-
                 if self.time_elapsed >= 0.9 * self.time_limit:
                     terminal = self.terminal_state_check(successor_state)
                     cur_move_value = inf if terminal else self.eval_func(successor_state.state) 
@@ -110,6 +114,10 @@ class Player:
                     alpha = cur_move_value
                     best_move = successor_state
 
+            # All moves have been forward pruned, no matter what we do, we are getting captured, play the first
+            # move we've found available to us.
+            if best_move is None and successor_state is not None:
+                best_move = successor_states[0]
 
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
@@ -162,6 +170,7 @@ class Player:
         # extract state and number of tiles
         self.board_state = next_state.state
         self.num_tiles = next_state.num_tiles
+        self.tile_difference_threshold = self.tile_difference(self.board_state)
 
         # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
@@ -172,7 +181,6 @@ class Player:
         # update counter of moves played
         self.current_turn += 1
         self.time_elapsed += time.process_time() - turn_start_time
-        print(self.time_elapsed)
 
     def cutoff_test(self, successor_state, depth):
         """
@@ -182,6 +190,7 @@ class Player:
         or -inf for the opponent winning. If the depth limit reached, return
         evaluation of the state.
         """
+
         if self.branching_factor <= 10:
             self.depth_limit = 4
         else:
@@ -224,7 +233,7 @@ class Player:
         # calculate all features
         win_dist_diff = self.win_distance_difference(state)
         tile_difference = self.tile_difference(state)
-        two_bridge_count_diff = self.two_bridge_count_diff(state)
+        # two_bridge_count_diff = self.two_bridge_count_diff(state)
 
         # sum features according to weights
         evaluation = 0.2 * win_dist_diff + 0.8 * tile_difference
@@ -353,10 +362,10 @@ class Player:
     def max_value(self, input_state, board_size, alpha, beta, depth, player_colour):
         """
         Max value function is called on states resulting from a move of the opponent's colour,
-        calls mix value function on states resulting from candidate moves by our player.
+        calls min value function on states resulting from candidate moves by our player.
         """
         if depth == 2:
-            if self.tile_difference(input_state.state) < 0:
+            if self.tile_difference(input_state.state) < self.tile_difference_threshold:
                 return None
 
         # if depth limit or terminal state reached, cur_off test
@@ -391,6 +400,7 @@ class Player:
             return eval
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
+
         for successor_state in successor_states:
             curr_succ_state_max_val = self.max_value(successor_state, board_size, alpha, beta, depth + 1,
                                                     (player_colour + 1) % 2)
@@ -398,8 +408,8 @@ class Player:
             # None up the search tree.
             if curr_succ_state_max_val is None:
                 return None
-            beta = min(beta, curr_succ_state_max_val)
 
+            beta = min(beta, curr_succ_state_max_val)
             if beta <= alpha:
                 return alpha
 
