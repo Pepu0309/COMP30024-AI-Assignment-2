@@ -363,7 +363,9 @@ class Player:
 
     def two_bridge_count_diff(self, state):
         """
-        to be documented
+        Goes through the state and determines how many two-bridges the player and the opponent has and computes
+        the difference between them. Used as an evaluation function feature. Two-bridges are vulnerable to captures
+        and should ideally be avoided.
         """
 
         player_two_bridge_count = 0
@@ -376,11 +378,11 @@ class Player:
                     if cur_cell_occupied_colour == self.player_colour:
                         player_two_bridge_count += two_bridge_check("count", state, r, q,
                                                                     self.board_size, cur_cell_occupied_colour)
-                    # elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
-                    #     opponent_two_bridge_count += two_bridge_check("count", state, r, q,
-                    #                                                 self.board_size, cur_cell_occupied_colour)
+                    elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
+                        opponent_two_bridge_count += two_bridge_check("count", state, r, q,
+                                                                    self.board_size, cur_cell_occupied_colour)
 
-        return player_two_bridge_count # - opponent_two_bridge_count
+        return player_two_bridge_count - opponent_two_bridge_count
 
     # -----------------------------------------------------------------------------------------------------------#
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
