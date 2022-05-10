@@ -35,7 +35,7 @@ class Player:
         # Used for dynamic depth
         self.depth_limit = 2
         self.empty_tile_count = n ** 2
-        self.branching_factor = 0
+        self.max_branching_factor = 0
 
         self.current_turn = 0
         self.num_tiles = 0
@@ -90,36 +90,38 @@ class Player:
         else:
 
             best_move = None
+            
+            # storing last move of both players as coordinate tuples, ternary to deal with cases where STEAL was played recently
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
 
-
+            # retrieve successor states for the current board states
             successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles, self.player_colour, opponent_last, my_last)
-            self.branching_factor = len(successor_states)
+
+            # loop over successor states, this acts as depth 0 of alpha-beta search
             for successor_state in successor_states:
-                # If a move results in us being vulnerable to a capture, we immediately prune this move.
+
+                # if a move results in us being vulnerable to a capture, we immediately prune this move.
                 if successor_state.capture_prevention_check():
                     continue
 
-                # If we're nearing the time limit, switch back to a greedy strategy and if we are still running out
-                # of time, switch to just evaluating the tile difference.
-                if self.time_elapsed >= 0.9 * self.time_limit:
+                # if we're nearing the time limit, switch back to a greedy strategy and if we are still running out
+                # of time, switch to just evaluating the tile difference
+                if self.time_elapsed >= tenuOS.util.constants.GREEDY_THRESHOLD * self.time_limit:
                     terminal = self.terminal_state_check(successor_state)
-                    if self.time_elapsed >= 0.95 * self.time_limit:
+                    if self.time_elapsed >= tenuOS.util.constants.TILE_DIFF_ONLY_THRESHOLD * self.time_limit:
                         cur_move_value = inf if terminal else self.tile_difference(successor_state.state)
                     else:
                         cur_move_value = inf if terminal else self.eval_func(successor_state.state)
-                # For each move, evaluation function value should be the minimum value of its successor states
-                # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
-                # the potential moves available to us in this current turn.
+                # for each move, evaluation function value should be the minimum value of its successor states
+                # due to game theory (opponent plays the lowest value move) hence, we call min_value for all
+                # the potential moves available to us in this current turn
                 else:
                     cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
 
                 gc.collect()
 
-                if cur_move_value is None:
-                    continue
-
+                # if move is better than previous best, store 
                 if cur_move_value > alpha:
                     alpha = cur_move_value
                     best_move = successor_state
@@ -129,14 +131,16 @@ class Player:
             if best_move is None and successor_states is not None:
                 best_move = successor_states[0]
 
+            # set our move to be returned
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
-        self.my_last_move = move
         # Explicitly type casting as suggested by Alexander Zable in Ed Thread #118
         if move[0] == "PLACE":
             move = (str(move[0]), int(move[1]), int(move[2]))
 
+        # update time elapsed
         self.time_elapsed += time.process_time() - action_start_time
+
         return move
 
     def turn(self, player, action):
@@ -180,7 +184,10 @@ class Player:
         # extract state and number of tiles
         self.board_state = next_state.state
         self.num_tiles = next_state.num_tiles
+        # store current tile difference for use with forward pruning of branches where we blunder captures
         self.tile_difference_threshold = self.tile_difference(self.board_state)
+        # set max branching factor based on how filled the board is
+        self.max_branching_factor = self.board_size ** 2 - self.num_tiles
 
         # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
@@ -201,10 +208,11 @@ class Player:
         evaluation of the state.
         """
 
-        if self.branching_factor <= 6:
-            self.depth_limit = 4
+        # allow for higher depth during endgames
+        if self.max_branching_factor <= 10:
+            self.depth_limit = tenuOS.util.constants.HIGH_DEPTH
         else:
-            self.depth_limit = 2
+            self.depth_limit = tenuOS.util.constants.LOW_DEPTH
 
         # only check if at least board_size tiles exist and 2 * board_size - 1
         # moves have been played, as these are the minimum values for both
@@ -227,12 +235,17 @@ class Player:
         return None
 
     def terminal_state_check(self, successor_state):
-
+        """
+        Checks if the most recently played move won the game for the player
+        who played the move.
+        """
+        # set the 2 edges to the colour of player who most recently played a move
         start_edge = (BoardEdge.BLUE_START if successor_state.player_colour ==
                                               tenuOS.util.constants.BLUE else BoardEdge.RED_START)
         goal_edge = (BoardEdge.BLUE_END if successor_state.player_colour ==
                                            tenuOS.util.constants.BLUE else BoardEdge.RED_END)
 
+        # if player can reach both edges only traversing on their own colour tiles, they have won
         if ((search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, start_edge, Mode.WIN_TEST)) and
             (search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST))):
             return True
@@ -288,11 +301,11 @@ class Player:
                 edge_tile_freqs[axes[colour][0]] = {tenuOS.util.constants.RED: 0, tenuOS.util.constants.BLUE: 0, tenuOS.util.constants.EMPTY: 0}
                 # iterate over all tiles on the edge and store frequencies
                 # of each colour
-                for axes[opposite_colour(colour)][0] in range(self.board_size):
+                for axes[(colour + 1) % 2][0] in range(self.board_size):
                     edge_tile_freqs[axes[colour][0]][state[r[0]][q[0]]] += 1
 
             # set the starting edge to the edge with the fewest opposite coloured tiles to minimise dijkstra calls
-            if edge_tile_freqs[START_IND][opposite_colour(colour)] < edge_tile_freqs[END_IND][opposite_colour(colour)]:
+            if edge_tile_freqs[START_IND][(colour + 1) % 2] < edge_tile_freqs[END_IND][(colour + 1) % 2]:
                 start_edge = BoardEdge.BLUE_START if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_START
                 goal_edge = BoardEdge.BLUE_END if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_END
             else:
@@ -308,9 +321,9 @@ class Player:
             # by terminal state checking
             win_dists[colour] = self.board_size * 2
             # iterate over starting edge
-            for axes[opposite_colour(colour)][0] in range(self.board_size):
+            for axes[(colour + 1) % 2][0] in range(self.board_size):
                 # skip any tiles of opposite colour
-                if state[r[0]][q[0]] == opposite_colour(colour):
+                if state[r[0]][q[0]] == (colour + 1) % 2:
                     continue
                 # call dijkstra and find the min path cost from that tile to the goal edge
                 temp_path_cost = search_path(state, colour, self.board_size, (r[0], q[0]), goal_edge, Mode.WIN_DIST)
@@ -321,7 +334,7 @@ class Player:
                     win_dists[colour] = temp_path_cost
 
         # return win distance difference value such that higher is better for our colour
-        win_dist_diff = win_dists[opposite_colour(colour)] - win_dists[colour]
+        win_dist_diff = win_dists[(colour + 1) % 2] - win_dists[colour]
         return win_dist_diff if self.player_colour == colour else -win_dist_diff
 
     def tile_difference(self, state):
@@ -331,7 +344,6 @@ class Player:
 
         A larger value means more of our colour tiles than the opponents colour.
         """
-
         player_tile_count = 0
         opponent_tile_count = 0
 
@@ -370,16 +382,18 @@ class Player:
 
         return player_two_bridge_count # - opponent_two_bridge_count
 
+    # -----------------------------------------------------------------------------------------------------------#
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
-    # player_colour
-
+    # player_colour)
+    # -----------------------------------------------------------------------------------------------------------#
     def max_value(self, input_state, board_size, alpha, beta, depth, player_colour):
         """
         Max value function is called on states resulting from a move of the opponent's colour,
         calls min value function on states resulting from candidate moves by our player.
         """
 
-        # if depth limit or terminal state reached, cur_off test
+        # if depth limit or terminal state reached, return evaluation
+        # inf for if we win, -inf if we lose
         eval = self.cutoff_test(input_state, depth)
         if eval is not None:
             return eval
@@ -389,13 +403,8 @@ class Player:
         for successor_state in successor_states:
             curr_succ_state_min_val = self.min_value(successor_state, board_size, alpha, beta, depth + 1,
                                                     (player_colour + 1) % 2)
-            # If None was returned from min_value, then this subtree has been determined to be pruned. Hence, propagate
-            # None up the search tree. In the case of a depth = 2 pruning, max_value doesn't need to check for this but
-            # this is added just to make the code more extensible in case other lower depth pruning is added.
-            if curr_succ_state_min_val is None:
-                return None
-            alpha = max(alpha, curr_succ_state_min_val)
 
+            alpha = max(alpha, curr_succ_state_min_val)
             if alpha >= beta:
                 return beta
 
@@ -407,6 +416,8 @@ class Player:
         calls max value function on states resulting from candidate moves by the opponent.
         """
 
+        # if depth limit or terminal state reached, return evaluation
+        # inf for if we win, -inf if we lose
         eval = self.cutoff_test(input_state, depth)
         if eval is not None:
             return eval
@@ -416,10 +427,6 @@ class Player:
         for successor_state in successor_states:
             curr_succ_state_max_val = self.max_value(successor_state, board_size, alpha, beta, depth + 1,
                                                     (player_colour + 1) % 2)
-            # If None was returned from max_value, then this subtree has been determined to be pruned. Hence, propagate
-            # None up the search tree.
-            if curr_succ_state_max_val is None:
-                return None
 
             beta = min(beta, curr_succ_state_max_val)
             if beta <= alpha:
@@ -523,7 +530,9 @@ class SuccessorState:
         self.apply_move()
 
     def apply_move(self):
-
+        """
+        Applies the move being considered to the state to determine the outcome state.
+        """
         # Change the cell to player's colour
         self.state[self.move[0]][self.move[1]] = self.player_colour
 

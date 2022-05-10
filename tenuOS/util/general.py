@@ -16,11 +16,3 @@ def print_state(state):
             print(q, end = ", ")
         print("")
     print("")
-
-def opposite_colour(colour):
-    if colour == RED:
-        return BLUE
-    elif colour == BLUE:
-        return RED
-    else:
-        return EMPTY

@@ -56,15 +56,12 @@ class Node:
         current node can be traversed while graph is being searched.
         """
         if not is_valid_cell(self.r, self.q, n): 
-            #print("out of bounds")
             return True
         else:
             self.colour = state[self.r][self.q]
         if (mode == Mode.WIN_DIST and self.colour != tenuOS.util.constants.EMPTY and self.colour != colour):
-            #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         elif (mode == Mode.WIN_TEST and self.colour != colour):
-            #print("mode is win_test, and colour is opposite or empty,, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         return False        
 
@@ -169,39 +166,12 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
     """
-
-    """
-    print_state(state) 
-    print(player_colour)
-    print(board_size)
-    print(start_coords)
-    print(goal_edge)
-    print(mode)
-    """
-
     start_node = Node(start_coords, state)
 
     # return None and post error if starting node is out of bounds
     if not is_valid_cell(start_node.r, start_node.q, board_size):
         print("pathfinding error: starting node out of bounds", file=sys.stderr)
         return None
-
-    # defining nested function to check for terminal / goal state
-    # probably a better way to do this
-    """
-    if goal == Goal.BLUE_START:
-        def terminal_test(node):
-            return node.q == 0
-    elif goal == Goal.BLUE_END:
-        def terminal_test(node):
-            return node.q == board_size
-    elif goal == Goal.RED_START:
-        def terminal_test(node):
-            return node.r == 0
-    elif goal == Goal.RED_END:
-        def terminal_test(node):
-            return node.r == board_size
-    """
 
     # temporary method of testing which doesnt hardcode one of the 4 tests
     def win_test(node):
@@ -243,12 +213,8 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
             if curr_node_cost.node.tile_unavailable(state, player_colour, mode, board_size):
                 continue
 
-            #print("available")    
-
             # calculate cost of traversing to adjacent node for given mode    
             new_cost = curr_node_cost.adjacent_cost(state, player_colour, mode)
-
-            #print(new_cost)
 
             # if this node isn't in cumulative_cost_dict, we have not visited it
             # yet. If the new_cost is less than the value in the
