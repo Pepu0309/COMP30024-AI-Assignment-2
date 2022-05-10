@@ -1,5 +1,5 @@
 from enum import Enum
-from util.constants import *
+from tenuOS.util.constants import *
 
 class Tile(Enum):
     BLUE = 0

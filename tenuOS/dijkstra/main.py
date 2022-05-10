@@ -33,11 +33,9 @@ import sys, json
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
-from dijkstra.pathfinding import *
-from tenuOS.player import Player
-from util.enums import *
-from util.general import print_state
-from dijkstra.util import *
+from tenuOS.util.enums import *
+from tenuOS.util.general import print_state
+from tenuOS.dijkstra.util import *
 
 def main():
     """

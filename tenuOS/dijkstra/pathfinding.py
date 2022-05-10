@@ -3,10 +3,10 @@ from cmath import inf
 import sys
 import heapq
 
-from dijkstra.util import print_coordinate
-from util.enums import *
-from util.general import *
-import util.constants
+from tenuOS.dijkstra.util import print_coordinate
+from tenuOS.util.enums import *
+from tenuOS.util.general import *
+import tenuOS.util.constants
 
 class Node:
     """
@@ -60,7 +60,7 @@ class Node:
             return True
         else:
             self.colour = state[self.r][self.q]
-        if (mode == Mode.WIN_DIST and self.colour != util.constants.EMPTY and self.colour != colour):
+        if (mode == Mode.WIN_DIST and self.colour != tenuOS.util.constants.EMPTY and self.colour != colour):
             #print("mode is eval, and colour is opposite, self colour: " + str(self.colour) + ", player colour: " + str(colour))
             return True
         elif (mode == Mode.WIN_TEST and self.colour != colour):
@@ -95,7 +95,7 @@ class NodeCost:
         mode, assuming path goes via self's node.
         """
         if mode == Mode.WIN_DIST:
-            if self.node.colour == util.constants.EMPTY:
+            if self.node.colour == tenuOS.util.constants.EMPTY:
                 return self.cumul_path_cost + 1
             elif self.node.colour == colour:
                 return self.cumul_path_cost

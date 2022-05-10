@@ -1,9 +1,8 @@
-from asyncio import constants
 from cmath import inf
-from util.enums import *
-from dijkstra.pathfinding import search_path
-from util.general import *
-import util.constants
+from tenuOS.dijkstra.pathfinding import search_path
+import tenuOS.util.constants
+from tenuOS.util.general import *
+from tenuOS.util.enums import *
 import numpy as np
 import gc
 import time
@@ -22,12 +21,12 @@ class Player:
         init_start_time = time.process_time()
 
         if player == "red":
-            self.player_colour = util.constants.RED
+            self.player_colour = tenuOS.util.constants.RED
         elif player == "blue":
-            self.player_colour = util.constants.BLUE
+            self.player_colour = tenuOS.util.constants.BLUE
 
         self.board_size = n
-        self.board_state = np.full((n, n), util.constants.EMPTY, dtype="int8")
+        self.board_state = np.full((n, n), tenuOS.util.constants.EMPTY, dtype="int8")
 
         # Used for reverting to basic strategy in case nearing time limit
         self.time_limit = n ** 2
@@ -89,40 +88,67 @@ class Player:
                 else:
                     move = ("PLACE", self.board_size // 2, self.board_size // 2)
         else:
+
             best_move = None
+            loops = 1
+
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
 
-            successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles, self.player_colour, opponent_last, my_last)
-            self.branching_factor = len(successor_states)
-            for successor_state in successor_states:
-                # If a move results in us being vulnerable to a capture, we immediately prune this move.
-                if successor_state.capture_prevention_check():
-                    continue
+            successor_states = []
+            layer = 0
 
-                # For each move their, evaluation function value should be the minimum value of its successor states
-                # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
-                # the potential moves available to us in this current turn.
-                if self.time_elapsed >= 0.9 * self.time_limit:
-                    terminal = self.terminal_state_check(successor_state)
-                    cur_move_value = inf if terminal else self.eval_func(successor_state.state) 
+            while loops:
+
+                successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles,
+                    self.player_colour, opponent_last, my_last, successor_states, layer)
+                self.branching_factor = len(successor_states)
+                for successor_state in successor_states:
+                    # If a move results in us being vulnerable to a capture, we immediately prune this move.
+                    if successor_state.capture_prevention_check():
+                        continue
+
+                    # If we're nearing the time limit, switch back to a greedy strategy and if we are still running out
+                    # of time, switch to just evaluating the tile difference.
+                    if self.time_elapsed >= 0.9 * self.time_limit:
+                        terminal = self.terminal_state_check(successor_state)
+                        if self.time_elapsed >= 0.95 * self.time_limit:
+                            cur_move_value = inf if terminal else self.tile_difference(successor_state.state)
+                        else:
+                            cur_move_value = inf if terminal else self.eval_func(successor_state.state)
+                    # For each move, evaluation function value should be the minimum value of its successor states
+                    # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
+                    # the potential moves available to us in this current turn.
+                    else:
+                        cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
+
+                    gc.collect()
+
+                    if cur_move_value is None:
+                        continue
+
+                    if cur_move_value > alpha:
+                        alpha = cur_move_value
+                        best_move = successor_state
+
+                # All moves considered result in us getting captures, expand candidate move
+                # search
+                if best_move is None and successor_states is not None:
+                    # full board scan has not yet been done to retrieve successor
+                    # states, expand search for successor_states
+                    if layer < tenuOS.util.constants.MAX_LAYERS - 1:
+                        layer = 2 if loops == 1 else layer + 1
+                        # set to an empty list to allow MIN_SUCCESSOR_STATES
+                        # states to be checked
+                        loops += 1
+                        continue
+                    # if no move has been found that isn't a blunder, pick a
+                    # random move, basically give up
+                    else:
+                        best_move = successor_states[0]
+                        break
                 else:
-                    cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
-
-                gc.collect()
-
-                if cur_move_value is None:
-                    continue
-
-                if cur_move_value > alpha:
-                    alpha = cur_move_value
-                    best_move = successor_state
-
-            # All moves have been forward pruned, no matter what we do, we are getting captured, play the first
-            # move we've found available to us.
-            if best_move is None and successor_state is not None:
-                print("defaulting to bad move")
-                best_move = successor_states[0]
+                    break
 
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
@@ -133,14 +159,14 @@ class Player:
 
         self.time_elapsed += time.process_time() - action_start_time
         return move
-    
+
     def turn(self, player, action):
         """
-        Called at the end of each player's turn to inform this player of 
-        their chosen action. Update your internal representation of the 
-        game state based on this. The parameter action is the chosen 
-        action itself. 
-        
+        Called at the end of each player's turn to inform this player of
+        their chosen action. Update your internal representation of the
+        game state based on this. The parameter action is the chosen
+        action itself.
+
         Note: At the end of your player's turn, the action parameter is
         the same as what your player returned from the action method
         above. However, the referee has validated it at this point.
@@ -148,9 +174,9 @@ class Player:
         turn_start_time = time.process_time()
         # store player colour using our own defined constants
         if player == "red":
-            player_colour = util.constants.RED
+            player_colour = tenuOS.util.constants.RED
         elif player == "blue":
-            player_colour = util.constants.BLUE
+            player_colour = tenuOS.util.constants.BLUE
 
         # store axial coords of the action if the action was to place
         if action[0] == "PLACE":
@@ -166,7 +192,7 @@ class Player:
                 q = self.my_last_move[1]
                 r = self.my_last_move[2]
             # remove the tile placed by the player whose move was stolen
-            self.board_state[q][r] = util.constants.EMPTY
+            self.board_state[q][r] = tenuOS.util.constants.EMPTY
             # store the coords where the reflected tile will be placed
             self.steal_coords = (r, q)
 
@@ -196,12 +222,12 @@ class Player:
         evaluation of the state.
         """
 
-        if self.branching_factor <= 10:
+        if self.branching_factor <= 6:
             self.depth_limit = 4
         else:
             self.depth_limit = 2
 
-        # only check if at least board_size tiles exist and 2 * board_size - 1 
+        # only check if at least board_size tiles exist and 2 * board_size - 1
         # moves have been played, as these are the minimum values for both
         # in a terminal state
         if successor_state.num_tiles >= self.board_size and self.current_turn >= 2 * self.board_size - 1:
@@ -210,7 +236,7 @@ class Player:
             if terminal:
                 # they win for even depth, we win for odd depth
                 return -inf if depth % 2 == 0 else inf
-        
+
         # cutoff depth reached, return evaluation
         if depth == self.depth_limit:
             return self.eval_func(successor_state.state)
@@ -220,14 +246,14 @@ class Player:
     def terminal_state_check(self, successor_state):
 
         start_edge = (BoardEdge.BLUE_START if successor_state.player_colour ==
-            util.constants.BLUE else BoardEdge.RED_START)
+                                              tenuOS.util.constants.BLUE else BoardEdge.RED_START)
         goal_edge = (BoardEdge.BLUE_END if successor_state.player_colour ==
-            util.constants.BLUE else BoardEdge.RED_END)
+                                           tenuOS.util.constants.BLUE else BoardEdge.RED_END)
 
         if ((search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, start_edge, Mode.WIN_TEST)) and
             (search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST))):
             return True
-        
+
         return False
 
     def eval_func(self, state):
@@ -260,23 +286,23 @@ class Player:
         # starting edges meet at (0, 0)
         # ending edges meet at (board_size - 1, board_size - 1)
         START_IND, END_IND = 0, self.board_size - 1
-        
+
         # iterate over both colours, to calculate win distance for both
-        for colour in (util.constants.RED, util.constants.BLUE):
-                
-            # using lists as wrappers to allow r and q to be modified by 
+        for colour in (tenuOS.util.constants.RED, tenuOS.util.constants.BLUE):
+
+            # using lists as wrappers to allow r and q to be modified by
             # assignment from dictionaries with r and q as values
             r, q = [0], [0]
 
             # dict to support iterating over r or q axes depending on colour
-            axes = {util.constants.RED: r, util.constants.BLUE: q}
+            axes = {tenuOS.util.constants.RED: r, tenuOS.util.constants.BLUE: q}
 
             # iterate over both the starting and ending edge for current colour
             # retrieving the 0th index to 'unwrap' and modify the index stored
-            # in r or q        
+            # in r or q
             for axes[colour][0] in (START_IND, END_IND):
                 # store a dict of tile colour frequencies for both edges
-                edge_tile_freqs[axes[colour][0]] = {util.constants.RED: 0, util.constants.BLUE: 0, util.constants.EMPTY: 0}
+                edge_tile_freqs[axes[colour][0]] = {tenuOS.util.constants.RED: 0, tenuOS.util.constants.BLUE: 0, tenuOS.util.constants.EMPTY: 0}
                 # iterate over all tiles on the edge and store frequencies
                 # of each colour
                 for axes[opposite_colour(colour)][0] in range(self.board_size):
@@ -284,11 +310,11 @@ class Player:
 
             # set the starting edge to the edge with the fewest opposite coloured tiles to minimise dijkstra calls
             if edge_tile_freqs[START_IND][opposite_colour(colour)] < edge_tile_freqs[END_IND][opposite_colour(colour)]:
-                start_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START
-                goal_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END        
+                start_edge = BoardEdge.BLUE_START if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_START
+                goal_edge = BoardEdge.BLUE_END if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_END
             else:
-                start_edge = BoardEdge.BLUE_END if colour == util.constants.BLUE else BoardEdge.RED_END
-                goal_edge = BoardEdge.BLUE_START if colour == util.constants.BLUE else BoardEdge.RED_START   
+                start_edge = BoardEdge.BLUE_END if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_END
+                goal_edge = BoardEdge.BLUE_START if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_START
 
             # if starting at start edge have init start node (0, 0)
             # if starting at end edge have init start node (0, board_size - 1)
@@ -301,7 +327,7 @@ class Player:
             # iterate over starting edge
             for axes[opposite_colour(colour)][0] in range(self.board_size):
                 # skip any tiles of opposite colour
-                if state[r[0]][q[0]] == opposite_colour(colour): 
+                if state[r[0]][q[0]] == opposite_colour(colour):
                     continue
                 # call dijkstra and find the min path cost from that tile to the goal edge
                 temp_path_cost = search_path(state, colour, self.board_size, (r[0], q[0]), goal_edge, Mode.WIN_DIST)
@@ -310,7 +336,7 @@ class Player:
                 # update win distance to new minimum
                 if temp_path_cost and temp_path_cost < win_dists[colour]:
                     win_dists[colour] = temp_path_cost
-            
+
         # return win distance difference value such that higher is better for our colour
         win_dist_diff = win_dists[opposite_colour(colour)] - win_dists[colour]
         return win_dist_diff if self.player_colour == colour else -win_dist_diff
@@ -318,8 +344,8 @@ class Player:
     def tile_difference(self, state):
         """
         Takes a state and returns the difference in the number of tiles that exist on the
-        board placed by our player and our opponent. 
-        
+        board placed by our player and our opponent.
+
         A larger value means more of our colour tiles than the opponents colour.
         """
 
@@ -350,7 +376,7 @@ class Player:
 
         for r in range(self.board_size):
             for q in range(self.board_size):
-                if state[r][q] != util.constants.EMPTY:
+                if state[r][q] != tenuOS.util.constants.EMPTY:
                     cur_cell_occupied_colour = state[r][q]
                     if cur_cell_occupied_colour == self.player_colour:
                         player_two_bridge_count += two_bridge_check("count", state, r, q,
@@ -376,6 +402,7 @@ class Player:
             return eval
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
+
         for successor_state in successor_states:
             curr_succ_state_min_val = self.min_value(successor_state, board_size, alpha, beta, depth + 1,
                                                     (player_colour + 1) % 2)
@@ -417,47 +444,47 @@ class Player:
 
         return beta
 
-    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move):
+    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move, successor_states=[], layer=0):
         """
         Takes a state as input, the player colour of whose turn it is in the given state,
         and returns a list of possible 'successor states' resulting from different moves
-        that could be played. 
-        
+        that could be played.
+
         Generates successor states in rings about the tiles placed
         in the most recent two moves to optimise the order in which alpha-beta considers
         moves at depth 0, as the best move is likely to be near these tiles.
         """
 
-        # list for successor states, dict to store which states have already been added
-        successor_states = []
+        # dict to store which states have already been added
         added = {}
 
         # initialise dictionary to false for all tiles
         for r in range(board_size):
             for q in range(board_size):
                 added[(r, q)] = False
-   
+
         # dictionary constant used to iterate in spiral/circles about a central tile
-        NEXT = {util.constants._30_DEG:  (-1,  1),
-                util.constants._90_DEG:  (-1,  0),
-                util.constants._150_DEG: (0 , -1),
-                util.constants._210_DEG: (1 , -1),
-                util.constants._270_DEG: (1 ,  0),
-                util.constants._330_DEG: (0 ,  1)}
-        MIN_LAYERS = 2 # num layers to explore about a tile
-        MAX_LAYERS = 4
+        NEXT = {tenuOS.util.constants._30_DEG:  (-1, 1),
+                tenuOS.util.constants._90_DEG:  (-1, 0),
+                tenuOS.util.constants._150_DEG: (0 , -1),
+                tenuOS.util.constants._210_DEG: (1 , -1),
+                tenuOS.util.constants._270_DEG: (1 , 0),
+                tenuOS.util.constants._330_DEG: (0 , 1)}
+        # minimum num layers to explore about a tile
+        MIN_LAYERS = 2
+        # minimum states to return, else full board scan
         MIN_SUCCESSOR_STATES = 12
 
         # repeat state generation about most recent move for both players
         for move in (last_move, prior_move):
 
-            # arbitrary start at 30 degrees north 
-            angle = util.constants._30_DEG
+            # arbitrary start at 30 degrees north
+            angle = tenuOS.util.constants._30_DEG
             # this equates to +1 in the r axis
             r, q = move[0] + 1, move[1]
-            
+
             # search all tiles LAYERS about tile placed by move
-            for layer in range(MAX_LAYERS):
+            while layer < tenuOS.util.constants.MAX_LAYERS:
                 # if after MIN_LAYERS layers, at least MIN_SUCCESSOR_STATES successor states
                 # have been found, break
                 if layer >= MIN_LAYERS and len(successor_states) >= MIN_SUCCESSOR_STATES:
@@ -468,23 +495,25 @@ class Player:
                     for j in range(layer):
                         # if tile is valid (within the board dimensions), not yet had its successor state added,
                         # and is currently empty, generate successor state and add to list
-                        if is_valid_cell(r, q, board_size) and (not added[(r, q)]) and state[r][q] == util.constants.EMPTY:
+                        if is_valid_cell(r, q, board_size) and (not added[(r, q)]) and state[r][q] == tenuOS.util.constants.EMPTY:
                             # update added dict
                             added[(r, q)] = True
                             successor_states.append(SuccessorState(state, player_colour, board_size, num_tiles, (r, q), last_move))
-                        # adjust r and q according the current angle 
+                        # adjust r and q according the current angle
                         r += NEXT[angle][0]
                         q += NEXT[angle][1]
                     # move to next edge
                     angle = (angle + 1) % len(NEXT)
-            
+
+                layer += 1
+
             # if after MAX_LAYERS layers have been checked, less than MIN_SUCCESSOR_STATES
             # successor states have been found, do a full board scan and add states until
             # all states added or MIN_SUCCESSOR_STATES have been found total
             if len(successor_states) < MIN_SUCCESSOR_STATES:
                 for r in range(board_size):
                     for q in range(board_size):
-                        if len(successor_states) < MIN_SUCCESSOR_STATES and (not added[(r, q)]) and state[r][q] == util.constants.EMPTY:
+                        if len(successor_states) < MIN_SUCCESSOR_STATES and (not added[(r, q)]) and state[r][q] == tenuOS.util.constants.EMPTY:
                             successor_states.append(SuccessorState(state, player_colour, board_size, num_tiles, (r, q), last_move))
 
         return successor_states
@@ -531,7 +560,7 @@ class SuccessorState:
         self.num_tiles += 1 - len(cells_to_remove)
 
         for cell in cells_to_remove:
-            self.state[cell[0]][cell[1]] = util.constants.EMPTY
+            self.state[cell[0]][cell[1]] = tenuOS.util.constants.EMPTY
 
     def capture_prevention_check(self):
         r = self.move[0]
@@ -559,7 +588,7 @@ def two_bridge_check(mode, state, r, q, board_size, player_colour, cells_to_remo
     # in the 2 adjacent cells in between the 2-bridge. If we're trying to count the number of 2 bridges, then we want
     # the 2 adjacent cells in between the 2-bridge to be empty.
     if mode == "count":
-        tile_status = util.constants.EMPTY
+        tile_status = tenuOS.util.constants.EMPTY
     else:
         tile_status = (player_colour + 1) % 2
 
