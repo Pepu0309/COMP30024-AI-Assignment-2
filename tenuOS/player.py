@@ -90,65 +90,44 @@ class Player:
         else:
 
             best_move = None
-            loops = 1
-
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
 
-            successor_states = []
-            layer = 0
 
-            while loops:
+            successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles, self.player_colour, opponent_last, my_last)
+            self.branching_factor = len(successor_states)
+            for successor_state in successor_states:
+                # If a move results in us being vulnerable to a capture, we immediately prune this move.
+                if successor_state.capture_prevention_check():
+                    continue
 
-                successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles,
-                    self.player_colour, opponent_last, my_last, successor_states, layer)
-                self.branching_factor = len(successor_states)
-                for successor_state in successor_states:
-                    # If a move results in us being vulnerable to a capture, we immediately prune this move.
-                    if successor_state.capture_prevention_check():
-                        continue
-
-                    # If we're nearing the time limit, switch back to a greedy strategy and if we are still running out
-                    # of time, switch to just evaluating the tile difference.
-                    if self.time_elapsed >= 0.9 * self.time_limit:
-                        terminal = self.terminal_state_check(successor_state)
-                        if self.time_elapsed >= 0.95 * self.time_limit:
-                            cur_move_value = inf if terminal else self.tile_difference(successor_state.state)
-                        else:
-                            cur_move_value = inf if terminal else self.eval_func(successor_state.state)
-                    # For each move, evaluation function value should be the minimum value of its successor states
-                    # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
-                    # the potential moves available to us in this current turn.
+                # If we're nearing the time limit, switch back to a greedy strategy and if we are still running out
+                # of time, switch to just evaluating the tile difference.
+                if self.time_elapsed >= 0.9 * self.time_limit:
+                    terminal = self.terminal_state_check(successor_state)
+                    if self.time_elapsed >= 0.95 * self.time_limit:
+                        cur_move_value = inf if terminal else self.tile_difference(successor_state.state)
                     else:
-                        cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
-
-                    gc.collect()
-
-                    if cur_move_value is None:
-                        continue
-
-                    if cur_move_value > alpha:
-                        alpha = cur_move_value
-                        best_move = successor_state
-
-                # All moves considered result in us getting captures, expand candidate move
-                # search
-                if best_move is None and successor_states is not None:
-                    # full board scan has not yet been done to retrieve successor
-                    # states, expand search for successor_states
-                    if layer < tenuOS.util.constants.MAX_LAYERS - 1:
-                        layer = 2 if loops == 1 else layer + 1
-                        # set to an empty list to allow MIN_SUCCESSOR_STATES
-                        # states to be checked
-                        loops += 1
-                        continue
-                    # if no move has been found that isn't a blunder, pick a
-                    # random move, basically give up
-                    else:
-                        best_move = successor_states[0]
-                        break
+                        cur_move_value = inf if terminal else self.eval_func(successor_state.state)
+                # For each move, evaluation function value should be the minimum value of its successor states
+                # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
+                # the potential moves available to us in this current turn.
                 else:
-                    break
+                    cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
+
+                gc.collect()
+
+                if cur_move_value is None:
+                    continue
+
+                if cur_move_value > alpha:
+                    alpha = cur_move_value
+                    best_move = successor_state
+
+            # All moves considered result in us getting captures, 
+            # pick a random move and continue to not waste time
+            if best_move is None and successor_states is not None:
+                best_move = successor_states[0]
 
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
@@ -444,7 +423,7 @@ class Player:
 
         return beta
 
-    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move, successor_states=[], layer=0):
+    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move):
         """
         Takes a state as input, the player colour of whose turn it is in the given state,
         and returns a list of possible 'successor states' resulting from different moves
@@ -455,7 +434,8 @@ class Player:
         moves at depth 0, as the best move is likely to be near these tiles.
         """
 
-        # dict to store which states have already been added
+        # list of successor states, dict to store which states have already been added
+        successor_states = []
         added = {}
 
         # initialise dictionary to false for all tiles
@@ -484,7 +464,7 @@ class Player:
             r, q = move[0] + 1, move[1]
 
             # search all tiles LAYERS about tile placed by move
-            while layer < tenuOS.util.constants.MAX_LAYERS:
+            for layer in range(tenuOS.util.constants.MAX_LAYERS):
                 # if after MIN_LAYERS layers, at least MIN_SUCCESSOR_STATES successor states
                 # have been found, break
                 if layer >= MIN_LAYERS and len(successor_states) >= MIN_SUCCESSOR_STATES:
