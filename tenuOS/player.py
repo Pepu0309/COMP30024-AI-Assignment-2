@@ -369,11 +369,6 @@ class Player:
         Max value function is called on states resulting from a move of the opponent's colour,
         calls min value function on states resulting from candidate moves by our player.
         """
-        # If we play a move and the opponent plays a move and we are captured, then we immediately prune this move
-        # by forward pruning.
-        if depth == 2:
-            if self.tile_difference(input_state.state) < self.tile_difference_threshold:
-                return None
 
         # if depth limit or terminal state reached, cur_off test
         eval = self.cutoff_test(input_state, depth)
