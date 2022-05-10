@@ -215,6 +215,10 @@ class Player:
             if terminal:
                 # they win for even depth, we win for odd depth
                 return -inf if depth % 2 == 0 else inf
+        
+        # if move blunders a capture, return -inf to cause branch to be pruned
+        if depth == 2 and self.tile_difference(successor_state.state) < self.tile_difference_threshold:
+            return -inf
 
         # cutoff depth reached, return evaluation
         if depth == self.depth_limit:
