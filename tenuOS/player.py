@@ -143,6 +143,7 @@ class Player:
                     # random move, basically give up
                     else:
                         best_move = successor_states[0]
+                        break
                 else:
                     break
 
