@@ -102,8 +102,13 @@ class Player:
             for successor_state in successor_states:
 
                 # if a move results in us being vulnerable to a capture, we immediately prune this move.
-                if successor_state.capture_prevention_check():
-                    continue
+                #if successor_state.capture_prevention_check():
+                #    continue
+
+                #terminal = self.terminal_state_check(successor_state)
+                #print_state(successor_state.state)
+                #print(successor_state.move)
+                #print(terminal)
 
                 # if we're nearing the time limit, switch back to a greedy strategy and if we are still running out
                 # of time, switch to just evaluating the tile difference
@@ -239,15 +244,31 @@ class Player:
         Checks if the most recently played move won the game for the player
         who played the move.
         """
+
         # set the 2 edges to the colour of player who most recently played a move
         start_edge = (BoardEdge.BLUE_START if successor_state.player_colour ==
                                               tenuOS.util.constants.BLUE else BoardEdge.RED_START)
         goal_edge = (BoardEdge.BLUE_END if successor_state.player_colour ==
                                            tenuOS.util.constants.BLUE else BoardEdge.RED_END)
+    
+        
+        start_path = search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, start_edge, Mode.WIN_TEST)
+        end_path = search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST)
+
+        """
+        if start_path is not None and end_path is not None and successor_state.player_colour == BLUE:   
+            print_state(successor_state.state)
+            print("blue" if successor_state.player_colour == BLUE else "red")
+            print(start_edge)
+            print(goal_edge)
+            print(successor_state.board_size)
+            print(successor_state.move)
+            print(start_path)
+            print(end_path)   
+        """     
 
         # if player can reach both edges only traversing on their own colour tiles, they have won
-        if ((search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, start_edge, Mode.WIN_TEST)) and
-            (search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST))):
+        if start_path is not None and end_path is not None:
             return True
 
         return False

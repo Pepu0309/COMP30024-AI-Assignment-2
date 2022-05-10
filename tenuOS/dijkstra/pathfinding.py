@@ -166,6 +166,7 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     a winning path, as a feature of eval() whereby empty tiles have path cost 1
     and own colour tiles have path cost 0.
     """
+
     start_node = Node(start_coords, state)
 
     # return None and post error if starting node is out of bounds
@@ -178,11 +179,11 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
         if goal_edge == BoardEdge.BLUE_START:
             return node.q == 0
         elif goal_edge == BoardEdge.BLUE_END:
-            return node.q == board_size
+            return node.q == board_size - 1
         elif goal_edge == BoardEdge.RED_START:
             return node.r == 0
         elif goal_edge == BoardEdge.RED_END:
-            return node.r == board_size
+            return node.r == board_size - 1
 
     # initialise starting NodeCost obj with path cost 0 and insert into new pq        
     start_node_cost = NodeCost(start_node, 0)

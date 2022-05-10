@@ -17,7 +17,7 @@ class BoardEdge(Enum):
     RED_END = 3
 
 ENUM_CONVERSIONS = {
-    "eval": Mode.WIN_DIST,
+    "win_dist": Mode.WIN_DIST,
     "win_test": Mode.WIN_TEST,
     "blue": BLUE,
     "red": RED,
