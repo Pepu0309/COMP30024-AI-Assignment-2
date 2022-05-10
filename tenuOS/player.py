@@ -89,40 +89,62 @@ class Player:
                 else:
                     move = ("PLACE", self.board_size // 2, self.board_size // 2)
         else:
+
             best_move = None
+            loops = 1
+
             opponent_last = (self.steal_coords[0], self.steal_coords[1]) if self.opponent_last_move[0] == "STEAL" else (self.opponent_last_move[1], self.opponent_last_move[2])
             my_last = (self.steal_coords[0], self.steal_coords[1]) if self.my_last_move[0] == "STEAL" else (self.my_last_move[1], self.my_last_move[2])
+            
+            successor_states = []
+            layer = 0
 
-            successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles, self.player_colour, opponent_last, my_last)
-            self.branching_factor = len(successor_states)
-            for successor_state in successor_states:
-                # If a move results in us being vulnerable to a capture, we immediately prune this move.
-                if successor_state.capture_prevention_check():
-                    continue
+            while loops:
 
-                # For each move, evaluation function value should be the minimum value of its successor states
-                # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
-                # the potential moves available to us in this current turn.
-                if self.time_elapsed >= 0.9 * self.time_limit:
-                    terminal = self.terminal_state_check(successor_state)
-                    cur_move_value = inf if terminal else self.eval_func(successor_state.state) 
+                successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles,
+                    self.player_colour, opponent_last, my_last, successor_states, layer)
+                self.branching_factor = len(successor_states)
+                for successor_state in successor_states:
+                    # If a move results in us being vulnerable to a capture, we immediately prune this move.
+                    if successor_state.capture_prevention_check():
+                        continue
+
+                    # For each move, evaluation function value should be the minimum value of its successor states
+                    # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
+                    # the potential moves available to us in this current turn.
+                    if self.time_elapsed >= 0.9 * self.time_limit:
+                        terminal = self.terminal_state_check(successor_state)
+                        cur_move_value = inf if terminal else self.eval_func(successor_state.state) 
+                    else:
+                        cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
+
+                    gc.collect()
+
+                    if cur_move_value is None:
+                        continue
+
+                    if cur_move_value > alpha:
+                        
+                        alpha = cur_move_value
+                        best_move = successor_state
+
+                # All moves considered result in us getting captures, expand candidate move
+                # search
+                if best_move is None and successor_states is not None:
+                    # full board scan has not yet been done to retrieve successor 
+                    # states, expand search for successor_states
+                    if layer < util.constants.MAX_LAYERS - 1:
+                        layer = 2 if loops == 1 else layer + 1
+                        # set to an empty list to allow MIN_SUCCESSOR_STATES 
+                        # states to be checked
+                        loops += 1
+                        continue
+                    # if no move has been found that isn't a blunder, pick a
+                    # random move, basically give up
+                    else:
+                        best_move = successor_states[0]
                 else:
-                    cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
-
-                gc.collect()
-
-                if cur_move_value is None:
-                    continue
-
-                if cur_move_value > alpha:
-                    alpha = cur_move_value
-                    best_move = successor_state
-
-            # All moves have been forward pruned, no matter what we do, we are getting captured, play the first
-            # move we've found available to us.
-            if best_move is None and successor_state is not None:
-                print("defaulting to bad move")
-                best_move = successor_states[0]
+                    break
 
             move = ("PLACE", best_move.move[0], best_move.move[1])
 
@@ -196,7 +218,7 @@ class Player:
         evaluation of the state.
         """
 
-        if self.branching_factor <= 10:
+        if self.branching_factor <= 6:
             self.depth_limit = 4
         else:
             self.depth_limit = 2
@@ -210,12 +232,6 @@ class Player:
             if terminal:
                 # they win for even depth, we win for odd depth
                 return -inf if depth % 2 == 0 else inf
-        
-        # If we play a move and the opponent plays a move and we are captured, then we immediately prune this move
-        # by forward pruning.
-        if depth == 2:
-            if self.tile_difference(successor_state.state) < self.tile_difference_threshold:
-                return -inf
 
         # cutoff depth reached, return evaluation
         if depth == self.depth_limit:
@@ -382,6 +398,7 @@ class Player:
             return eval
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
+
         for successor_state in successor_states:
             curr_succ_state_min_val = self.min_value(successor_state, board_size, alpha, beta, depth + 1,
                                                     (player_colour + 1) % 2)
@@ -423,7 +440,7 @@ class Player:
 
         return beta
 
-    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move):
+    def get_successor_states(self, state, board_size, num_tiles, player_colour, last_move, prior_move, successor_states=[], layer=0):
         """
         Takes a state as input, the player colour of whose turn it is in the given state,
         and returns a list of possible 'successor states' resulting from different moves
@@ -434,8 +451,7 @@ class Player:
         moves at depth 0, as the best move is likely to be near these tiles.
         """
 
-        # list for successor states, dict to store which states have already been added
-        successor_states = []
+        # dict to store which states have already been added
         added = {}
 
         # initialise dictionary to false for all tiles
@@ -450,8 +466,9 @@ class Player:
                 util.constants._210_DEG: (1 , -1),
                 util.constants._270_DEG: (1 ,  0),
                 util.constants._330_DEG: (0 ,  1)}
-        MIN_LAYERS = 2 # num layers to explore about a tile
-        MAX_LAYERS = 4
+        # minimum num layers to explore about a tile
+        MIN_LAYERS = 2 
+        # minimum states to return, else full board scan
         MIN_SUCCESSOR_STATES = 12
 
         # repeat state generation about most recent move for both players
@@ -463,7 +480,7 @@ class Player:
             r, q = move[0] + 1, move[1]
             
             # search all tiles LAYERS about tile placed by move
-            for layer in range(MAX_LAYERS):
+            while layer < util.constants.MAX_LAYERS:
                 # if after MIN_LAYERS layers, at least MIN_SUCCESSOR_STATES successor states
                 # have been found, break
                 if layer >= MIN_LAYERS and len(successor_states) >= MIN_SUCCESSOR_STATES:
@@ -483,6 +500,8 @@ class Player:
                         q += NEXT[angle][1]
                     # move to next edge
                     angle = (angle + 1) % len(NEXT)
+
+                layer += 1
             
             # if after MAX_LAYERS layers have been checked, less than MIN_SUCCESSOR_STATES
             # successor states have been found, do a full board scan and add states until
