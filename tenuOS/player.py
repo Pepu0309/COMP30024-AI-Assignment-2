@@ -100,7 +100,7 @@ class Player:
                 if successor_state.capture_prevention_check():
                     continue
 
-                # For each move their, evaluation function value should be the minimum value of its successor states
+                # For each move, evaluation function value should be the minimum value of its successor states
                 # due to game theory (opponent plays the lowest value move). Hence, we call min_value for all
                 # the potential moves available to us in this current turn.
                 if self.time_elapsed >= 0.9 * self.time_limit:
@@ -211,6 +211,12 @@ class Player:
                 # they win for even depth, we win for odd depth
                 return -inf if depth % 2 == 0 else inf
         
+        # If we play a move and the opponent plays a move and we are captured, then we immediately prune this move
+        # by forward pruning.
+        if depth == 2:
+            if self.tile_difference(successor_state.state) < self.tile_difference_threshold:
+                return -inf
+
         # cutoff depth reached, return evaluation
         if depth == self.depth_limit:
             return self.eval_func(successor_state.state)
@@ -369,11 +375,6 @@ class Player:
         Max value function is called on states resulting from a move of the opponent's colour,
         calls min value function on states resulting from candidate moves by our player.
         """
-        # If we play a move and the opponent plays a move and we are captured, then we immediately prune this move
-        # by forward pruning.
-        if depth == 2:
-            if self.tile_difference(input_state.state) < self.tile_difference_threshold:
-                return None
 
         # if depth limit or terminal state reached, cur_off test
         eval = self.cutoff_test(input_state, depth)
