@@ -36,7 +36,7 @@ class Player:
         # Used for dynamic depth
         self.depth_limit = 2
         self.TILE_COUNT = n ** 2
-        self.max_branching_factor = 0
+        self.max_branching_factor = self.TILE_COUNT
 
         # storing number of turns for terminal state optimzation
         self.current_turn = 0
@@ -193,6 +193,14 @@ class Player:
         # set max branching factor based on how filled the board is
         self.max_branching_factor = self.TILE_COUNT - self.num_tiles
 
+        # allow for higher depth during endgames
+        if self.max_branching_factor <= tenuOS.util.constants.HIGH_DEPTH_THRESHOLD:
+            self.depth_limit = tenuOS.util.constants.HIGH_DEPTH
+        elif self.max_branching_factor <= tenuOS.util.constants.MID_DEPTH_THRESHOLD:
+            self.depth_limit = tenuOS.util.constants.MID_DEPTH
+        else:
+            self.depth_limit = tenuOS.util.constants.LOW_DEPTH
+
         # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
             self.my_last_move = action
@@ -211,14 +219,6 @@ class Player:
         or -inf for the opponent winning. If the depth limit reached, return
         evaluation of the state.
         """
-
-        # allow for higher depth during endgames
-        if self.max_branching_factor <= tenuOS.util.constants.HIGH_DEPTH_THRESHOLD:
-            self.depth_limit = tenuOS.util.constants.HIGH_DEPTH
-        elif self.max_branching_factor <= tenuOS.util.constants.MID_DEPTH_THRESHOLD:
-            self.depth_limit = tenuOS.util.constants.MID_DEPTH
-        else:
-            self.depth_limit = tenuOS.util.constants.LOW_DEPTH
 
         # only check if at least board_size tiles exist and 2 * board_size - 1
         # moves have been played, as these are the minimum values for both
@@ -428,6 +428,11 @@ class Player:
         eval = self.cutoff_test(input_state, depth)
         if eval is not None:
             return eval
+
+        # Do forward pruning at depth 1 only if the depth_limit is 2
+        if depth == 1 and self.depth_limit == 2:
+            if input_state.capture_prevention_check():
+                return -(float('inf'))
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
 
