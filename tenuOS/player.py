@@ -429,10 +429,10 @@ class Player:
         if eval is not None:
             return eval
 
-        # Do forward pruning at depth 1 only if the depth_limit is 2
-        if depth == 1 and self.depth_limit == 2:
-            if input_state.capture_prevention_check():
-                return -(float('inf'))
+        # # Do forward pruning at depth 1 only if the depth_limit is 2
+        # if depth == 1 and self.depth_limit == 2:
+        #     if input_state.capture_prevention_check():
+        #         return -(float('inf'))
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
 
