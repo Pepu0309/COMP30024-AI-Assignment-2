@@ -60,8 +60,8 @@ class Player:
         of the game, select an action to play.
         """
         action_start_time = time.process_time()
-        alpha = -(float('inf'))
-        beta = float('inf')
+        alpha = -inf
+        beta = inf
 
         move = None
 
@@ -432,7 +432,7 @@ class Player:
         # # Do forward pruning at depth 1 only if the depth_limit is 2
         # if depth == 1 and self.depth_limit == 2:
         #     if input_state.capture_prevention_check():
-        #         return -(float('inf'))
+        #         return -inf
 
         successor_states = self.get_successor_states(input_state.state, board_size, input_state.num_tiles, player_colour, input_state.move, input_state.prev_move)
 
