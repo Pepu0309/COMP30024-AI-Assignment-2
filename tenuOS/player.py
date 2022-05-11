@@ -52,9 +52,6 @@ class Player:
         # store the coordinates of the steal, after reflection
         self.steal_coords = None
 
-        # Used for forward pruning
-        self.tile_difference_threshold = 0
-
         self.time_elapsed += time.process_time() - init_start_time
 
     def action(self):
@@ -123,9 +120,6 @@ class Player:
                 # due to game theory (opponent plays the lowest value move) hence, we call min_value for all
                 # the potential moves available to us in this current turn
                 else:
-                    # if a move results in us being vulnerable to a capture, we immediately prune this move.
-                    #if successor_state.capture_prevention_check():
-                    #    continue
                     cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
 
                 gc.collect()
