@@ -372,7 +372,9 @@ class Player:
 
     def two_bridge_count_diff(self, state):
         """
-        to be documented
+        Goes through the state and determines how many two-bridges the player and the opponent has and computes
+        the difference between them. Used as an evaluation function feature. Two-bridges are vulnerable to captures
+        and should ideally be avoided.
         """
 
         player_two_bridge_count = 0
