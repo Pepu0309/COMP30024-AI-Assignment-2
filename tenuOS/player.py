@@ -35,13 +35,21 @@ class Player:
 
         # Used for dynamic depth
         self.depth_limit = 2
-        self.empty_tile_count = n ** 2
+        self.TILE_COUNT = n ** 2
         self.max_branching_factor = 0
 
+        # storing number of turns for terminal state optimzation
         self.current_turn = 0
+
+        # storing number of tiles for terminal state optimization
+        # and endgame detection
         self.num_tiles = 0
+
+        # storing each players last moves for successor state generation
         self.my_last_move = None
         self.opponent_last_move = None
+
+        # store the coordinates of the steal, after reflection
         self.steal_coords = None
 
         # Used for forward pruning
@@ -189,7 +197,7 @@ class Player:
         # store current tile difference for use with forward pruning of branches where we blunder captures
         self.tile_difference_threshold = self.tile_difference(self.board_state)
         # set max branching factor based on how filled the board is
-        self.max_branching_factor = self.board_size ** 2 - self.num_tiles
+        self.max_branching_factor = self.TILE_COUNT - self.num_tiles
 
         # update knowledge of last played move for us or opponent
         if player_colour == self.player_colour:
