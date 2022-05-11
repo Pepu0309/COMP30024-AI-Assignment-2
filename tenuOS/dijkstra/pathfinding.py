@@ -3,7 +3,6 @@ from cmath import inf
 import sys
 import heapq
 
-from tenuOS.dijkstra.util import print_coordinate
 from tenuOS.util.enums import *
 from tenuOS.util.general import *
 import tenuOS.util.constants
@@ -64,13 +63,6 @@ class Node:
         elif (mode == Mode.WIN_TEST and self.colour != colour):
             return True
         return False        
-
-    def print_node_coords(self):
-        """
-        Prints the coordinate of the node.
-        """
-        print_coordinate(self.r, self.q)
-
 
 class NodeCost:
     """
