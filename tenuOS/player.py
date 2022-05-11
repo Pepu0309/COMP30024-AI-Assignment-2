@@ -213,8 +213,10 @@ class Player:
         """
 
         # allow for higher depth during endgames
-        if self.max_branching_factor <= tenuOS.util.constants.DEPTH_THRESHOLD:
+        if self.max_branching_factor <= tenuOS.util.constants.HIGH_DEPTH_THRESHOLD:
             self.depth_limit = tenuOS.util.constants.HIGH_DEPTH
+        elif self.max_branching_factor <= tenuOS.util.constants.MID_DEPTH_THRESHOLD:
+            self.depth_limit = tenuOS.util.constants.MID_DEPTH
         else:
             self.depth_limit = tenuOS.util.constants.LOW_DEPTH
 
