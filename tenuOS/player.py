@@ -31,6 +31,7 @@ class Player:
         # Used for reverting to basic strategy in case nearing time limit
         self.time_limit = n ** 2
         self.time_elapsed = 0
+        self.last_search_time = 0
 
         # Used for dynamic depth
         self.depth_limit = 2
@@ -98,12 +99,10 @@ class Player:
             # retrieve successor states for the current board states
             successor_states = self.get_successor_states(self.board_state, self.board_size, self.num_tiles, self.player_colour, opponent_last, my_last)
 
+            start_search_time = time.process_time()
             # loop over successor states, this acts as depth 0 of alpha-beta search
             for successor_state in successor_states:
 
-                # if a move results in us being vulnerable to a capture, we immediately prune this move.
-                #if successor_state.capture_prevention_check():
-                #    continue
 
                 #terminal = self.terminal_state_check(successor_state)
                 #print_state(successor_state.state)
@@ -112,9 +111,9 @@ class Player:
 
                 # if we're nearing the time limit, switch back to a greedy strategy and if we are still running out
                 # of time, switch to just evaluating the tile difference
-                if self.time_elapsed >= tenuOS.util.constants.GREEDY_THRESHOLD * self.time_limit:
+                if self.time_elapsed + self.last_search_time >= tenuOS.util.constants.GREEDY_THRESHOLD * self.time_limit:
                     terminal = self.terminal_state_check(successor_state)
-                    if self.time_elapsed >= tenuOS.util.constants.TILE_DIFF_ONLY_THRESHOLD * self.time_limit:
+                    if self.time_elapsed + self.last_search_time >= tenuOS.util.constants.TILE_DIFF_ONLY_THRESHOLD * self.time_limit:
                         cur_move_value = inf if terminal else self.tile_difference(successor_state.state)
                     else:
                         cur_move_value = inf if terminal else self.eval_func(successor_state.state)
@@ -122,6 +121,9 @@ class Player:
                 # due to game theory (opponent plays the lowest value move) hence, we call min_value for all
                 # the potential moves available to us in this current turn
                 else:
+                    # if a move results in us being vulnerable to a capture, we immediately prune this move.
+                    if successor_state.capture_prevention_check():
+                        continue
                     cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
 
                 gc.collect()
@@ -138,6 +140,7 @@ class Player:
 
             # set our move to be returned
             move = ("PLACE", best_move.move[0], best_move.move[1])
+            self.last_search_time = time.process_time() - start_search_time
 
         # Explicitly type casting as suggested by Alexander Zable in Ed Thread #118
         if move[0] == "PLACE":
@@ -397,11 +400,11 @@ class Player:
                     if cur_cell_occupied_colour == self.player_colour:
                         player_two_bridge_count += two_bridge_check("count", state, r, q,
                                                                     self.board_size, cur_cell_occupied_colour)
-                    # elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
-                    #     opponent_two_bridge_count += two_bridge_check("count", state, r, q,
-                    #                                                 self.board_size, cur_cell_occupied_colour)
+                    elif cur_cell_occupied_colour == (self.player_colour + 1) % 2:
+                        opponent_two_bridge_count += two_bridge_check("count", state, r, q,
+                                                                    self.board_size, cur_cell_occupied_colour)
 
-        return player_two_bridge_count # - opponent_two_bridge_count
+        return player_two_bridge_count - opponent_two_bridge_count
 
     # -----------------------------------------------------------------------------------------------------------#
     # Pseudocode from lectures but with "game" variable omitted (though probably included through board_size and
