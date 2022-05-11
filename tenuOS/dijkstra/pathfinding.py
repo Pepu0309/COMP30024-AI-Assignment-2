@@ -86,7 +86,7 @@ class NodeCost:
         """
         return self.cumul_path_cost < other.cumul_path_cost
 
-    def adjacent_cost(self, state, colour, mode):
+    def adjacent_cost(self, colour, mode):
         """
         Calculated the cumulative path cost of adjacent nodes for the given
         mode, assuming path goes via self's node.
@@ -207,15 +207,13 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
         # loop through all of the node / tile's adjacent nodes / tiles
         for adjacent_node in curr_node_cost.node.get_adjacent_nodes(state):
 
-            #adjacent_node.print_node_coords()
-
             # skip if a node cannot be traversed to, i.e. out of bounds, or
             # wrong colour depending on mode
-            if curr_node_cost.node.tile_unavailable(state, player_colour, mode, board_size):
+            if adjacent_node.tile_unavailable(state, player_colour, mode, board_size):
                 continue
 
             # calculate cost of traversing to adjacent node for given mode    
-            new_cost = curr_node_cost.adjacent_cost(state, player_colour, mode)
+            new_cost = curr_node_cost.adjacent_cost(player_colour, mode)
 
             # if this node isn't in cumulative_cost_dict, we have not visited it
             # yet. If the new_cost is less than the value in the

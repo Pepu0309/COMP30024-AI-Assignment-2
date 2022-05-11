@@ -103,12 +103,6 @@ class Player:
             # loop over successor states, this acts as depth 0 of alpha-beta search
             for successor_state in successor_states:
 
-
-                #terminal = self.terminal_state_check(successor_state)
-                #print_state(successor_state.state)
-                #print(successor_state.move)
-                #print(terminal)
-
                 # if we're nearing the time limit, switch back to a greedy strategy and if we are still running out
                 # of time, switch to just evaluating the tile difference
                 if self.time_elapsed + self.last_search_time >= tenuOS.util.constants.GREEDY_THRESHOLD * self.time_limit:
@@ -122,8 +116,8 @@ class Player:
                 # the potential moves available to us in this current turn
                 else:
                     # if a move results in us being vulnerable to a capture, we immediately prune this move.
-                    if successor_state.capture_prevention_check():
-                        continue
+                    #if successor_state.capture_prevention_check():
+                    #    continue
                     cur_move_value = self.min_value(successor_state, self.board_size, alpha, beta, 1, (self.player_colour + 1) % 2)
 
                 gc.collect()
@@ -217,7 +211,7 @@ class Player:
         """
 
         # allow for higher depth during endgames
-        if self.max_branching_factor <= 10:
+        if self.max_branching_factor <= tenuOS.util.constants.DEPTH_THRESHOLD:
             self.depth_limit = tenuOS.util.constants.HIGH_DEPTH
         else:
             self.depth_limit = tenuOS.util.constants.LOW_DEPTH
@@ -231,10 +225,6 @@ class Player:
             if terminal:
                 # they win for even depth, we win for odd depth
                 return -inf if depth % 2 == 0 else inf
-        
-        # if move blunders a capture, return -inf to cause branch to be pruned
-        if depth == 2 and self.tile_difference(successor_state.state) < self.tile_difference_threshold:
-            return -inf
 
         # cutoff depth reached, return evaluation
         if depth == self.depth_limit:
@@ -254,21 +244,8 @@ class Player:
         goal_edge = (BoardEdge.BLUE_END if successor_state.player_colour ==
                                            tenuOS.util.constants.BLUE else BoardEdge.RED_END)
     
-        
         start_path = search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, start_edge, Mode.WIN_TEST)
-        end_path = search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST)
-
-        """
-        if start_path is not None and end_path is not None and successor_state.player_colour == BLUE:   
-            print_state(successor_state.state)
-            print("blue" if successor_state.player_colour == BLUE else "red")
-            print(start_edge)
-            print(goal_edge)
-            print(successor_state.board_size)
-            print(successor_state.move)
-            print(start_path)
-            print(end_path)   
-        """     
+        end_path = search_path(successor_state.state, successor_state.player_colour, successor_state.board_size, successor_state.move, goal_edge, Mode.WIN_TEST)  
 
         # if player can reach both edges only traversing on their own colour tiles, they have won
         if start_path is not None and end_path is not None:
@@ -287,7 +264,7 @@ class Player:
         two_bridge_count_diff = self.two_bridge_count_diff(state)
 
         # sum features according to weights
-        evaluation = 0.3 * win_dist_diff + 1.1 * tile_difference - 0.4 * two_bridge_count_diff
+        evaluation = 0.7 * win_dist_diff + 0.7 * tile_difference - 0.4 * two_bridge_count_diff
 
         return evaluation
 
@@ -338,7 +315,7 @@ class Player:
 
             # if starting at start edge have init start node (0, 0)
             # if starting at end edge have init start node (0, board_size - 1)
-            axes[colour][0] = START_IND if start_edge == (BoardEdge.BLUE_START if colour == BLUE else BoardEdge.RED_START) else END_IND
+            axes[colour][0] = START_IND if start_edge == (BoardEdge.BLUE_START if colour == tenuOS.util.constants.BLUE else BoardEdge.RED_START) else END_IND
             temp_path_cost = None
             # set win distance to an upperbound, if no path is found for one colour
             # that implies the other colour has won, will have already been captured

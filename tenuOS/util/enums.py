@@ -1,5 +1,5 @@
 from enum import Enum
-from tenuOS.util.constants import *
+import tenuOS.util.constants
 
 class Tile(Enum):
     BLUE = 0
@@ -19,9 +19,9 @@ class BoardEdge(Enum):
 ENUM_CONVERSIONS = {
     "win_dist": Mode.WIN_DIST,
     "win_test": Mode.WIN_TEST,
-    "blue": BLUE,
-    "red": RED,
-    "empty": EMPTY,
+    "blue": tenuOS.util.constants.BLUE,
+    "red": tenuOS.util.constants.RED,
+    "empty": tenuOS.util.constants.EMPTY,
     "blue_start": BoardEdge.BLUE_START,
     "blue_end": BoardEdge.BLUE_END,
     "red_start": BoardEdge.RED_START,

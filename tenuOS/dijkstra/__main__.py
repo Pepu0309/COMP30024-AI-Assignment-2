@@ -1,3 +1,3 @@
-from tenuOS.dijkstra.main import main
+from dijkstra.main import main
 
 main()

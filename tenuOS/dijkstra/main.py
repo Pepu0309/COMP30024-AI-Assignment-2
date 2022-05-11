@@ -33,9 +33,11 @@ import sys, json
 # If you want to separate your code into separate files, put them
 # inside the `search` directory (like this one and `util.py`) and
 # then import from them like this:
-from tenuOS.util.enums import *
-from tenuOS.util.general import print_state
-from tenuOS.dijkstra.util import *
+import util.constants
+from util.enums import *
+from util.general import print_state
+from dijkstra.util import *
+from dijkstra.pathfinding import search_path
 
 def main():
     """
@@ -76,6 +78,7 @@ def main():
     print("start coords = " + str(start))
     print("mode = " + str(mode))
     print("goal edge = " + str(goal_edge))
+    print(" ")
 
     # print path cost of shortest path sing dijkstra
     path_cost = search_path(state, player_colour, board_size, start, goal_edge, mode)
