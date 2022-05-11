@@ -224,21 +224,5 @@ def search_path(state, player_colour, board_size, start_coords, goal_edge, mode)
     # no path was found
     return None
 
-    # dont think there is a usecase for the # of nodes in the path
-    """
-    path = []
-    # If path was found from start node to goal edge, create a list of the nodes
-    # traversed to reach the goal edge
-    if path_found:
-        # insert the the final node that belongs to the goal edge, after which
-        # prepend the previous node in the path in a loop until starting node
-        # is added, resulting in a list in order of traversal of the path
-        curr_node = curr_node_cost.node
-        while curr_node is not None:
-            path.insert(0, curr_node)
-            curr_node = came_from_dict[curr_node]
 
-    # length of the path
-    return len(path)
-    """
 
